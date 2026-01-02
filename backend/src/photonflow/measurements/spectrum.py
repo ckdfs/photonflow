@@ -34,13 +34,18 @@ def osa(signal: Signal, window: str = "hann", ref: float = 1.0) -> dict:
         data_w = data * w
         spec = torch.fft.fftshift(torch.fft.fft(data_w))
         power = torch.abs(spec) ** 2 / n
-    freq = torch.fft.fftshift(torch.fft.fftfreq(n, d=1.0 / signal.fs))
-
-    if signal.center_freq is not None:
-        freq = freq + signal.center_freq
+    freq_rel = torch.fft.fftshift(torch.fft.fftfreq(n, d=1.0 / signal.fs)).to(torch.float64)
+    center_freq = float(signal.center_freq) if signal.center_freq is not None else 0.0
+    freq = freq_rel + center_freq
 
     power_db = 10.0 * torch.log10(power / ref + 1e-30)
-    return {"freq": freq, "power": power, "power_db": power_db}
+    return {
+        "freq": freq,
+        "freq_rel": freq_rel,
+        "center_freq_hz": center_freq,
+        "power": power,
+        "power_db": power_db,
+    }
 
 
 def esa(signal: Signal, window: str = "hann", ref: float = 1.0) -> dict:

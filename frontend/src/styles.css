@@ -6,26 +6,30 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #root {
-  height: 100vh;
+  height: 100%;
 }
 
 .layout {
   display: grid;
-  grid-template-columns: 220px 1fr 320px;
+  grid-template-columns: minmax(260px, 320px) 1fr minmax(300px, 360px);
   gap: 12px;
   height: 100vh;
   padding: 12px;
   box-sizing: border-box;
+  grid-template-rows: 1fr;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .canvas {
@@ -34,6 +38,7 @@ body {
   border: 1px solid #d9d0be;
   border-radius: 12px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .toolbar {
@@ -88,10 +93,81 @@ body {
   margin-bottom: 8px;
 }
 
+.panel-header .panel-title {
+  margin-bottom: 0;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.panel-icon-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fff7e8;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-icon-button:hover {
+  background: #f3e6d1;
+}
+
+.panel-options {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #fffdf8;
+  border: 1px solid #d9d0be;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+  min-width: 220px;
+}
+
 .panel-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #6b5a42;
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.advanced-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #dccfb8;
 }
 
 .block-button {
@@ -104,9 +180,26 @@ body {
 
 .field {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
+}
+
+.field span {
+  font-size: 12px;
+  color: #5d4e3a;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-family: inherit;
+  font-size: 12px;
+  box-sizing: border-box;
 }
 
 .field-input {
@@ -220,12 +313,214 @@ body {
 
 .plot-title {
   font-weight: 600;
+}
+
+.plot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 6px;
+}
+
+.plot-actions {
+  display: flex;
+  gap: 6px;
+  position: relative;
+}
+
+.plot-icon-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fff7e8;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plot-icon-button:hover {
+  background: #f3e6d1;
+}
+
+.plot-options {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #fffdf8;
+  border: 1px solid #d9d0be;
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+  min-width: 160px;
+}
+
+.plot-options-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  color: #5d4e3a;
+}
+
+.plot-options-row input,
+.plot-options-row select {
+  width: 100%;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.plot-options-toggle {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: #5d4e3a;
+}
+
+.plot-options-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.plot-options-divider {
+  height: 1px;
+  background: #e6dcc7;
+  margin: 2px 0;
 }
 
 .plot-svg {
   width: 100%;
   height: auto;
+}
+
+.plot-clickable {
+  cursor: crosshair;
+}
+
+.plot-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: #6b5a42;
+  margin-top: 4px;
+}
+
+.plot-unit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b5a42;
+}
+
+.plot-unit select {
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-size: 11px;
+}
+
+
+.plot-markers {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2d4bd;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.output-config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plot-markers-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b5a42;
+}
+
+.plot-marker-controls {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.plot-marker-input {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.plot-marker-button {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fff7e8;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.plot-marker-button.ghost {
+  background: transparent;
+}
+
+.plot-marker-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.plot-marker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #6b5a42;
+}
+
+.plot-marker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.plot-marker-edit {
+  width: 100%;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-size: 11px;
+}
+
+.plot-marker-empty {
+  font-size: 11px;
+  color: #8a7b63;
 }
 
 .plot-axis {

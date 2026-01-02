@@ -13,21 +13,26 @@ class SimConfig:
     backend: str = "torch"
     device: str = "cpu"
     fs: float | str = "auto"
+    fs_min: float = 0.0
+    fs_max: float = 0.0
     oversample: int = 4
     seed: int = 0
     window: str = "hann"
     duration_s: float = 1e-6
     n_samples: Optional[int] = None
+    min_samples: int = 0
+    max_samples: int = 0
+    chunk: int = 0
 
 
 class SimContext:
-    def __init__(self, config: SimConfig, fs: float, n_samples: int):
+    def __init__(self, config: SimConfig, fs: float, n_samples: int, t0: float = 0.0, seed_offset: int = 0):
         self.config = config
         self.fs = fs
         self.n_samples = n_samples
         self.device = torch.device(config.device)
-        self.t0 = 0.0
-        torch.manual_seed(config.seed)
+        self.t0 = t0
+        torch.manual_seed(int(config.seed) + int(seed_offset))
 
     def time(self) -> torch.Tensor:
         return self.t0 + torch.arange(self.n_samples, device=self.device) / self.fs

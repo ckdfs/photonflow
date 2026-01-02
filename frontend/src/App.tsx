@@ -36,10 +36,15 @@ type OutputConfig = {
 const defaultSim = {
   backend: 'torch',
   device: 'cpu',
+  fs_min: 0,
+  fs_max: 0,
   oversample: 4,
   seed: 0,
   window: 'hann',
-  duration_s: 1e-6
+  chunk: 0,
+  duration_s: 1e-6,
+  min_samples: 0,
+  max_samples: 0
 }
 
 const defaultOutputConfig: OutputConfig = {
@@ -66,6 +71,7 @@ export default function App() {
   const [fsMode, setFsMode] = useState<'auto' | 'custom'>('auto')
   const [fsCustom, setFsCustom] = useState<number>(1e10)
   const [nSamples, setNSamples] = useState<string>('')
+  const [showAdvancedSim, setShowAdvancedSim] = useState(false)
   const [outputConfig, setOutputConfig] = useState<OutputConfig>(defaultOutputConfig)
 
   const { t } = useMemo(() => buildLabels(lang), [lang])
@@ -73,6 +79,17 @@ export default function App() {
     (en: string, zh: string) => (lang === 'zh' ? zh : en),
     [lang]
   )
+
+  const lastLaserCenterHz = useMemo(() => {
+    for (let i = nodes.length - 1; i >= 0; i -= 1) {
+      const node = nodes[i]
+      if (node?.data?.type === 'Laser') {
+        const value = Number(node.data?.params?.center_freq_hz)
+        return Number.isFinite(value) ? value : null
+      }
+    }
+    return null
+  }, [nodes])
 
   useEffect(() => {
     api.get('/blocks/specs').then((res) => setSpecs(res.data))
@@ -143,8 +160,10 @@ export default function App() {
   }, [nodes])
 
   useEffect(() => {
-    const pickFirst = (list: { nodeId: string; port: string }[]) =>
-      list.length > 0 ? { nodeId: list[0].nodeId, port: list[0].port } : { nodeId: '', port: '' }
+    const pickLast = (list: { nodeId: string; port: string }[]) =>
+      list.length > 0
+        ? { nodeId: list[list.length - 1].nodeId, port: list[list.length - 1].port }
+        : { nodeId: '', port: '' }
     const hasPort = (list: { nodeId: string; port: string }[], nodeId: string, port: string) =>
       list.some((item) => item.nodeId === nodeId && item.port === port)
 
@@ -152,20 +171,20 @@ export default function App() {
       let next = prev
       if (prev.osaMode === 'manual') {
         if (!hasPort(outputPorts.optical, prev.osaNode, prev.osaPort)) {
-          const first = pickFirst(outputPorts.optical)
-          next = { ...next, osaNode: first.nodeId, osaPort: first.port }
+          const last = pickLast(outputPorts.optical)
+          next = { ...next, osaNode: last.nodeId, osaPort: last.port }
         }
       }
       if (prev.esaMode === 'esa') {
         if (!hasPort(outputPorts.electrical, prev.esaNode, prev.esaPort)) {
-          const first = pickFirst(outputPorts.electrical)
-          next = { ...next, esaNode: first.nodeId, esaPort: first.port }
+          const last = pickLast(outputPorts.electrical)
+          next = { ...next, esaNode: last.nodeId, esaPort: last.port }
         }
       }
       if (prev.esaMode === 'time') {
         if (!hasPort(outputPorts.any, prev.esaNode, prev.esaPort)) {
-          const first = pickFirst(outputPorts.any)
-          next = { ...next, esaNode: first.nodeId, esaPort: first.port }
+          const last = pickLast(outputPorts.any)
+          next = { ...next, esaNode: last.nodeId, esaPort: last.port }
         }
       }
       return next
@@ -365,9 +384,9 @@ export default function App() {
       return portType === 'optical' || portType === 'electrical'
     }
 
-    const fallbackNode = nodes[0] || null
-    const autoOsa = outputPorts.optical[0] || (fallbackNode ? { nodeId: fallbackNode.id, port: 'opt_out' } : null)
-    const autoElec = outputPorts.electrical[0] || null
+    const fallbackNode = nodes[nodes.length - 1] || null
+    const autoOsa = outputPorts.optical[outputPorts.optical.length - 1] || (fallbackNode ? { nodeId: fallbackNode.id, port: 'opt_out' } : null)
+    const autoElec = outputPorts.electrical[outputPorts.electrical.length - 1] || null
 
     let osaRef = autoOsa
     if (outputConfig.osaMode === 'manual') {
@@ -607,14 +626,6 @@ export default function App() {
               />
             </label>
             <label className="field">
-              <span>{t('seed')}</span>
-              <input
-                type="number"
-                value={simConfig.seed}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, seed: Number(e.target.value) }))}
-              />
-            </label>
-            <label className="field">
               <span>{t('window')}</span>
               <select
                 value={simConfig.window}
@@ -643,85 +654,66 @@ export default function App() {
                 onChange={(e) => setNSamples(e.target.value)}
               />
             </label>
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-title">{t('outputsConfig')}</div>
-          <div className="panel-body">
-            <label className="field">
-              <span>{t('osaMode')}</span>
-              <select
-                value={outputConfig.osaMode}
-                onChange={(e) => setOutputConfig((cfg) => ({ ...cfg, osaMode: e.target.value as OsaMode }))}
-              >
-                <option value="auto">{t('auto')}</option>
-                <option value="manual">{t('manual')}</option>
-              </select>
-            </label>
-            {outputConfig.osaMode === 'manual' && (
-              <label className="field">
-                <span>{t('osa')}</span>
-                <select
-                  value={`${outputConfig.osaNode}:${outputConfig.osaPort}`}
-                  onChange={(e) => {
-                    const [nodeId, port] = e.target.value.split(':')
-                    setOutputConfig((cfg) => ({ ...cfg, osaNode: nodeId || '', osaPort: port || '' }))
-                  }}
-                >
-                  {outputPorts.optical.length === 0 && (
-                    <option value="">{t('noOutputs')}</option>
-                  )}
-                  {outputPorts.optical.map((opt) => (
-                    <option key={`${opt.nodeId}-${opt.port}`} value={`${opt.nodeId}:${opt.port}`}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <button
+              className="link-button"
+              onClick={() => setShowAdvancedSim((v) => !v)}
+              type="button"
+            >
+              {showAdvancedSim ? t('hideAdvanced') : t('showAdvanced')}
+            </button>
+            {showAdvancedSim && (
+              <div className="advanced-group">
+                <div className="section-title">{t('advancedSettings')}</div>
+                <label className="field">
+                  <span>{t('seed')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.seed}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, seed: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('fsMin')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.fs_min}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, fs_min: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('fsMax')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.fs_max}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, fs_max: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('chunk')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.chunk}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, chunk: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('minSamples')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.min_samples}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, min_samples: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className="field">
+                  <span>{t('maxSamples')}</span>
+                  <input
+                    type="number"
+                    value={simConfig.max_samples}
+                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, max_samples: Number(e.target.value) }))}
+                  />
+                </label>
+              </div>
             )}
-            <label className="field">
-              <span>{t('esaMode')}</span>
-              <select
-                value={outputConfig.esaMode}
-                onChange={(e) => setOutputConfig((cfg) => ({ ...cfg, esaMode: e.target.value as EsaMode }))}
-              >
-                <option value="auto">{t('auto')}</option>
-                <option value="esa">{t('spectrum')}</option>
-                <option value="time">{t('timePreview')}</option>
-              </select>
-            </label>
-            {outputConfig.esaMode !== 'auto' && (
-              <label className="field">
-                <span>{t('esa')}</span>
-                <select
-                  value={`${outputConfig.esaNode}:${outputConfig.esaPort}`}
-                  onChange={(e) => {
-                    const [nodeId, port] = e.target.value.split(':')
-                    setOutputConfig((cfg) => ({ ...cfg, esaNode: nodeId || '', esaPort: port || '' }))
-                  }}
-                >
-                  {outputConfig.esaMode === 'esa' && outputPorts.electrical.length === 0 && (
-                    <option value="">{t('noOutputs')}</option>
-                  )}
-                  {outputConfig.esaMode === 'time' && outputPorts.any.length === 0 && (
-                    <option value="">{t('noOutputs')}</option>
-                  )}
-                  {(outputConfig.esaMode === 'esa' ? outputPorts.electrical : outputPorts.any).map((opt) => (
-                    <option key={`${opt.nodeId}-${opt.port}`} value={`${opt.nodeId}:${opt.port}`}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label className="field">
-              <span>{t('includePower')}</span>
-              <input
-                type="checkbox"
-                checked={outputConfig.includePower}
-                onChange={(e) => setOutputConfig((cfg) => ({ ...cfg, includePower: e.target.checked }))}
-              />
-            </label>
           </div>
         </div>
         <div className="panel">
@@ -808,16 +800,66 @@ export default function App() {
         <Outputs
           result={result}
           expanded={expanded}
+          carrierAutoHz={lastLaserCenterHz ?? undefined}
+          outputConfig={outputConfig}
+          outputPorts={outputPorts}
+          onOutputConfigChange={(patch) => setOutputConfig((cfg) => ({ ...cfg, ...patch }))}
           labels={{
             title: t('outputs'),
             jobResult: t('jobResult'),
             expandedGraph: t('expandedGraph'),
             noResult: t('noResult'),
             notExpanded: t('notExpanded'),
+            outputsConfig: t('outputsConfig'),
+            osaMode: t('osaMode'),
+            esaMode: t('esaMode'),
+            auto: t('auto'),
+            manual: t('manual'),
+            spectrum: t('spectrum'),
+            timePreview: t('timePreview'),
+            includePower: t('includePower'),
+            noOutputs: t('noOutputs'),
             osa: t('osa'),
             esa: t('esa'),
             time: t('time'),
-            meta: t('meta')
+            meta: t('meta'),
+            range: t('range'),
+            peak: t('peak'),
+            markers: t('markers'),
+            markerInput: t('markerInput'),
+            addMarker: t('addMarker'),
+            clearMarkers: t('clearMarkers'),
+            removeMarker: t('removeMarker'),
+            unit: t('unit'),
+            unitHz: t('unitHz'),
+            unitNm: t('unitNm'),
+            unitOffset: t('unitOffset'),
+            offset: t('offset'),
+            carrierCenter: t('carrierCenter'),
+            carrierAuto: t('carrierAuto'),
+            carrierManual: t('carrierManual'),
+            carrierValue: t('carrierValue'),
+            wavelengthNm: t('wavelengthNm'),
+            frequencyHz: t('frequencyHz'),
+            saveImage: t('saveImage'),
+            saveCsv: t('saveCsv'),
+            exportSettings: t('exportSettings'),
+            exportScale: t('exportScale'),
+            exportFormat: t('exportFormat'),
+            exportBackground: t('exportBackground'),
+            exportPng: t('exportPng'),
+            exportSvg: t('exportSvg'),
+            exportBgSolid: t('exportBgSolid'),
+            exportBgTransparent: t('exportBgTransparent'),
+            osaPlotSettings: t('osaPlotSettings'),
+            esaPlotSettings: t('esaPlotSettings'),
+            showPeak: t('showPeak'),
+            showMinMax: t('showMinMax'),
+            viewRange: t('viewRange'),
+            rangeAuto: t('rangeAuto'),
+            rangeCustom: t('rangeCustom'),
+            rangeMin: t('rangeMin'),
+            rangeMax: t('rangeMax')
           }}
         />
       </div>

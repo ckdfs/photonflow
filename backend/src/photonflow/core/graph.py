@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
 
+import torch
+
 from photonflow.core.sim import SimConfig, SimContext
 from photonflow.core.signal import Signal
 from photonflow.blocks.base import BaseBlock, BlockRegistry, registry as default_registry
@@ -116,22 +118,30 @@ class Graph:
             fmax = 1e9
         return oversample * 2.0 * fmax
 
-    def run(self, config: SimConfig) -> Dict[Tuple[str, str], Signal]:
-        if self._order is None:
-            self.compile()
-
+    def _resolve_sim_params(self, config: SimConfig) -> tuple[float, int]:
         if config.fs == "auto":
             fs = self.estimate_fs(config.oversample)
         else:
             fs = float(config.fs)
+        if config.fs_min > 0.0:
+            fs = max(fs, config.fs_min)
+        if config.fs_max > 0.0:
+            fs = min(fs, config.fs_max)
+        config.fs = fs
 
         if config.n_samples is None:
             n_samples = max(2, int(round(fs * config.duration_s)))
         else:
             n_samples = int(config.n_samples)
+        if config.min_samples > 0:
+            n_samples = max(n_samples, config.min_samples)
+        if config.max_samples > 0:
+            n_samples = min(n_samples, config.max_samples)
+        config.n_samples = n_samples
+        config.duration_s = n_samples / fs
+        return fs, n_samples
 
-        ctx = SimContext(config=config, fs=fs, n_samples=n_samples)
-
+    def _run_once(self, ctx: SimContext) -> Dict[Tuple[str, str], Signal]:
         outputs: Dict[Tuple[str, str], Signal] = {}
         for node_id in self._order:
             node = self.nodes[node_id]
@@ -148,5 +158,54 @@ class Graph:
             node_outputs = node.process(inputs=inputs, ctx=ctx)
             for port_name, signal in node_outputs.items():
                 outputs[(node_id, port_name)] = signal
-
         return outputs
+
+    def _run_chunked(self, config: SimConfig, fs: float, n_samples: int) -> List[Dict[Tuple[str, str], Signal]]:
+        chunk = int(getattr(config, "chunk", 0) or 0)
+        if chunk <= 0 or chunk >= n_samples:
+            ctx = SimContext(config=config, fs=fs, n_samples=n_samples)
+            return [self._run_once(ctx)]
+
+        outputs_list: List[Dict[Tuple[str, str], Signal]] = []
+        offset = 0
+        chunk_idx = 0
+        while offset < n_samples:
+            chunk_len = min(chunk, n_samples - offset)
+            t0 = offset / fs
+            ctx = SimContext(config=config, fs=fs, n_samples=chunk_len, t0=t0, seed_offset=chunk_idx)
+            outputs_list.append(self._run_once(ctx))
+            offset += chunk_len
+            chunk_idx += 1
+        return outputs_list
+
+    def run_chunked(self, config: SimConfig) -> List[Dict[Tuple[str, str], Signal]]:
+        if self._order is None:
+            self.compile()
+        fs, n_samples = self._resolve_sim_params(config)
+        return self._run_chunked(config, fs, n_samples)
+
+    def run(self, config: SimConfig) -> Dict[Tuple[str, str], Signal]:
+        if self._order is None:
+            self.compile()
+
+        fs, n_samples = self._resolve_sim_params(config)
+        chunk = int(getattr(config, "chunk", 0) or 0)
+        if chunk <= 0 or chunk >= n_samples:
+            ctx = SimContext(config=config, fs=fs, n_samples=n_samples)
+            return self._run_once(ctx)
+
+        outputs_list = self._run_chunked(config, fs, n_samples)
+        stitched: Dict[Tuple[str, str], Signal] = {}
+        for key in outputs_list[0].keys():
+            segments = [out[key] for out in outputs_list]
+            first = segments[0]
+            data = torch.cat([seg.data for seg in segments], dim=-1)
+            stitched[key] = Signal(
+                data=data,
+                fs=first.fs,
+                t0=0.0,
+                center_freq=first.center_freq,
+                pol_mode=first.pol_mode,
+                meta=dict(first.meta),
+            )
+        return stitched

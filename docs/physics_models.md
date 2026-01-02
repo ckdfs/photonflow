@@ -101,6 +101,90 @@ E_{\mathrm{out}}(t) = E_{\mathrm{in}}(t)\,e^{j\phi}
 \tag{PS-1}
 $$
 
+<a id="fiber"></a>
+## 光纤（线性色散 + 损耗）
+频域传输：
+
+$$
+E_{\mathrm{out}}(t) = \mathcal{F}^{-1}\left\{\mathcal{F}\{E_{\mathrm{in}}(t)\}\,H_{\mathrm{fiber}}(f)\right\}
+\tag{FIBER-1}
+$$
+
+$$
+H_{\mathrm{fiber}}(f)=10^{-\alpha_{\mathrm{dB}}\,(L/1000)/20}\,
+\exp\left(j\left(-\frac{1}{2}\beta_2 L \omega^2-\frac{1}{6}\beta_3 L \omega^3\right)\right)
+$$
+
+其中 $\omega=2\pi f$，$L$ 为长度（m），$\alpha_{\mathrm{dB}}$ 为 dB/km 衰减系数。
+
+SSFM 分步传播（对色散与非线性做分步近似）：
+
+$$
+E_{k+1} = \mathcal{L}_{\Delta z/2}\left(\mathcal{N}_{\Delta z}\left(\mathcal{L}_{\Delta z/2}(E_k)\right)\right)
+\tag{FIBER-4}
+$$
+
+自动分步时，$\Delta z$ 由最大相位阈值与长度尺度共同约束：
+
+$$
+L_D \approx \frac{1}{|\beta_2|\omega_{\mathrm{rms}}^2},\quad L_{D3}\approx \frac{1}{|\beta_3|\omega_{\mathrm{rms}}^3},\quad
+L_{NL}=\frac{1}{\gamma P_{\max}}
+$$
+
+$$
+\Delta z \approx \min\left(\Delta z_{\phi},\,\eta\cdot\min(L_D,L_{D3},L_{NL})\right)
+$$
+
+其中 $\eta$ 为比例系数。
+
+偏振模色散（PMD）与双折射：
+
+$$
+\mathbf{E}_{\mathrm{out}}(f)=R(-\theta)\,
+\begin{bmatrix}e^{-j\phi/2} & 0 \\ 0 & e^{j\phi/2}\end{bmatrix}
+R(\theta)\,\mathbf{E}_{\mathrm{in}}(f)
+\tag{FIBER-2}
+$$
+
+$$
+\phi(\omega)=\phi_b+\omega\,\tau_{\mathrm{DGD}}
+$$
+
+时变 PMD 采用分块更新：每个时间块内以不同参数应用同一 PMD 变换。
+
+Kerr 非线性（简化 SPM）：
+
+$$
+E_{\mathrm{out}}(t)=E_{\mathrm{in}}(t)\exp\left(j\gamma L_{\mathrm{eff}}|E(t)|^2\right)
+\tag{FIBER-3}
+$$
+
+$$
+L_{\mathrm{eff}}=\frac{1-e^{-\alpha_p L}}{\alpha_p},\quad \alpha_p=\frac{\ln 10}{10}\frac{\alpha_{\mathrm{dB}}}{1000}
+$$
+
+双偏振时 $|E(t)|^2=|E_x|^2+|E_y|^2$。
+
+<a id="optical_filter"></a>
+## 光学滤波器（频域整形）
+
+$$
+E_{\mathrm{out}}(t) = \mathcal{F}^{-1}\left\{\mathcal{F}\{E_{\mathrm{in}}(t)\}\,H_{\mathrm{filter}}(f)\right\}
+\tag{FILTER-1}
+$$
+
+常用响应：
+- 矩形：$H(f)=\mathbf{1}_{|f-f_c|\le B/2}$
+- 高斯：$H(f)=\exp\left(-\frac{1}{2}\left(\frac{f-f_c}{\sigma}\right)^2\right)$
+- Butterworth：$H(f)=\left(1+(|f-f_c|/f_b)^{2n}\right)^{-1/2}$
+
+相位/群时延模型：
+
+$$
+H(f)=|H(f)|\exp\left(-j\omega\tau - \frac{j}{2}\beta_2\omega^2\right)
+\tag{FILTER-2}
+$$
+
 <a id="coupler"></a>
 ## 耦合器与分束器
 理想 2x2 耦合器（功率分配 $k$）：
@@ -215,12 +299,21 @@ $$
 
 $$
 R(\theta)=\begin{bmatrix}\cos\theta & -\sin\theta \\ \sin\theta & \cos\theta\end{bmatrix}
+\tag{POL-1}
 $$
 
 PDL 示例：
 
 $$
 J = R(-\theta)\,\mathrm{diag}\left(10^{-\mathrm{PDL}/20},\;1\right)\,R(\theta)
+\tag{POL-2}
+$$
+
+波片（相位延迟 $\delta$）：
+
+$$
+J = R(-\theta)\,\mathrm{diag}\left(e^{-j\delta/2},\;e^{j\delta/2}\right)\,R(\theta)
+\tag{POL-3}
 $$
 
 <a id="pd"></a>
@@ -291,6 +384,12 @@ $$
 | LP-1 | 低通模型（RC） |
 | ATT-1 | 光衰减器 |
 | PS-1 | 相移器 |
+| FIBER-1 | 光纤线性传输 |
+| FIBER-2 | 光纤 PMD/双折射 |
+| FIBER-3 | 光纤 Kerr 非线性 |
+| FIBER-4 | 光纤 SSFM 分步 |
+| FILTER-1 | 光学滤波器 |
+| FILTER-2 | 光学滤波器相位 |
 | CPL-1 | 2x2 耦合器 |
 | MZM-1 | MZM 干涉输出 |
 | MZM-2 | MZM 相位定义 |
@@ -301,6 +400,9 @@ $$
 | ELEC-2 | DC 源 |
 | ELEC-3 | 电增益 |
 | ELEC-4 | 电分路 |
+| POL-1 | 偏振旋转矩阵 |
+| POL-2 | 偏振相关损耗 |
+| POL-3 | 波片相位延迟 |
 | PD-1 | PD 电流模型 |
 | PD-2 | 散粒噪声 |
 | PD-3 | 热噪声 |
@@ -343,6 +445,59 @@ RBW/VBW 通过窗函数与平滑滤波实现。
 - `phase_error`：一臂附加相位误差。
 - `loss_db`：输出乘以 $10^{-L/20}$。
 - `phi`（PhaseShifter）：固定相移 $\phi$。
+
+### OpticalFiber
+- `length_m`：长度 $L$。
+- `alpha_db_per_km`：损耗系数 $\alpha_{\mathrm{dB}}$，幅度乘以 $10^{-\alpha_{\mathrm{dB}}(L/1000)/20}$。
+- `beta2_s2_per_m`：二阶色散 $\beta_2$。
+- `beta3_s3_per_m`：三阶色散 $\beta_3$。
+- `pmd_dgd_s`：偏振模色散 $\tau_{\mathrm{DGD}}$。
+- `pmd_axis_angle_rad`：PMD 主轴角 $\theta$。
+- `birefringence_phi_rad`：双折射相位延迟 $\phi_b$。
+- `pmd_time_vary`：PMD 时变开关。
+- `pmd_dgd_std_s` / `pmd_axis_std_rad` / `pmd_biref_std_rad`：DGD/主轴角/双折射漂移标准差。
+- `pmd_corr_s`：漂移相关时间（0 表示独立更新）。
+- `pmd_update_samples`：PMD 更新时间块长度。
+- `nonlin_gamma_w_inv_m`：Kerr 系数 $\gamma$。
+- `ssfm_steps`：SSFM 分步数。
+- `ssfm_auto`：自动估计分步数（色散/非线性生效时）。
+- `ssfm_max_phase_rad`：单步最大相位限制。
+- `ssfm_length_frac`：长度尺度分步比例 $\eta$。
+- `ssfm_auto_mode`：频宽估算方式（fft/fast）。
+- `ssfm_min_steps` / `ssfm_max_steps`：自动分步上下限。
+
+### OpticalFilter
+- `kind`：滤波类型（lowpass/highpass/bandpass/bandstop）。
+- `shape`：响应形状（rect/gaussian/butter）。
+- `bandwidth_hz`：带宽或截止频率 $B$。
+- `center_hz`：中心频率 $f_c$。
+- `order`：Butterworth 阶数 $n$。
+- `phase_mode`：相位模式（none/linear/quadratic/minimum）。
+- `group_delay_s`：群时延 $\tau$。
+- `gdd_s2`：群时延色散 $\beta_2$。
+
+### PolarizationRotator / PolarizationPDL
+- `angle_rad`：旋转角 $\theta$。
+- `pdl_db`：偏振相关损耗 PDL（dB）。
+- `axis_angle_rad`：PDL 主轴角 $\theta$。
+- `loss_db`：公共损耗（幅度乘以 $10^{-L/20}$）。
+- `retardance_rad`：波片相位延迟 $\delta$。
+- `time_vary`：时变漂移开关。
+- `angle_noise_std_rad` / `axis_noise_std_rad`：角度随机扰动标准差。
+- `angle_drift_std_rad` / `axis_drift_std_rad`：角度漂移标准差。
+- `pdl_noise_std_db` / `pdl_drift_std_db`：PDL 随机扰动与漂移标准差。
+- `drift_corr_s`：漂移相关时间。
+- `drift_update_samples`：漂移更新时间窗。
+
+### PolarizationWaveplate / PolarizationController
+- `retardance_rad` / `retardance1_rad..retardance3_rad`：波片相位延迟 $\delta$。
+- `axis_angle_rad` / `angle1_rad..angle3_rad`：波片主轴角 $\theta$。
+- `preset`：QHQ/H/Q 或自定义组合。
+- `angle_noise_std_rad` / `retardance_noise_std_rad`：角度与相位延迟随机扰动（标准差）。
+- `time_vary`：时变漂移开关。
+- `axis_drift_std_rad` / `retardance_drift_std_rad`：角度与相位延迟漂移标准差。
+- `drift_corr_s`：漂移相关时间。
+- `drift_update_samples`：漂移更新时间窗。
 
 ### PD
 - `responsivity`：$R$，电流 $i(t)=R|E|^2$。

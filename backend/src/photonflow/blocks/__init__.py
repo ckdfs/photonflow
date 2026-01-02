@@ -10,6 +10,14 @@ from photonflow.blocks.optical.dpmzm import DPMZM
 from photonflow.blocks.optical.coupler import Coupler
 from photonflow.blocks.optical.phase_shifter import PhaseShifter
 from photonflow.blocks.optical.attenuator import Attenuator
+from photonflow.blocks.optical.fiber import OpticalFiber
+from photonflow.blocks.optical.optical_filter import OpticalFilter
+from photonflow.blocks.optical.polarization import (
+    PolarizationRotator,
+    PolarizationPDL,
+    PolarizationWaveplate,
+    PolarizationController,
+)
 
 # Electrical blocks
 from photonflow.blocks.electrical.rf_source import RFSource
@@ -30,6 +38,12 @@ __all__ = [
     "Coupler",
     "PhaseShifter",
     "Attenuator",
+    "OpticalFiber",
+    "OpticalFilter",
+    "PolarizationRotator",
+    "PolarizationPDL",
+    "PolarizationWaveplate",
+    "PolarizationController",
     "RFSource",
     "DCSource",
     "ElecSplitter",

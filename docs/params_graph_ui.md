@@ -58,11 +58,13 @@ Graph 中的参数值示例（项目 JSON 内保存）：
 - device: "cpu" 或 "cuda"
 - fs: 数值或 "auto"（当 fs 为 auto 时，按图中器件估算最高频率）
 - oversample: 整数（默认 4）
+- fs_min / fs_max: 采样率下限/上限（0 表示不限制）
 - seed: 整数
 - window: "hann"、"blackman" 等
-- chunk: 可选整数（分块执行）
+- chunk: 可选整数（分块执行，按采样点，OSA/ESA 按块功率加权平均）
 - duration_s: 仿真时长（秒）
 - n_samples: 可选，直接指定采样点数
+- min_samples / max_samples: 采样点数下限/上限（0 表示不限制）
 
 仿真参数字典（默认值）：
 
@@ -71,11 +73,16 @@ Graph 中的参数值示例（项目 JSON 内保存）：
 | backend | string | "torch" | 后端类型 |
 | device | string | "cpu" | 设备类型 |
 | fs | number/string | "auto" | 采样率，auto 则自动估计 |
+| fs_min | float | 0.0 | 采样率下限（0 表示不限制） |
+| fs_max | float | 0.0 | 采样率上限（0 表示不限制） |
 | oversample | int | 4 | 过采样倍率 |
 | seed | int | 0 | 随机种子 |
 | window | string | "hann" | 窗函数 |
+| chunk | int | 0 | 分块长度（采样点，频谱按块加权平均） |
 | duration_s | float | 1e-6 | 仿真时长 |
 | n_samples | int | 不填写 | 由 duration_s 与 fs 自动推导 |
+| min_samples | int | 0 | 采样点数下限（0 表示不限制） |
+| max_samples | int | 0 | 采样点数上限（0 表示不限制） |
 
 ## Graph JSON 格式
 顶层结构：
@@ -318,6 +325,55 @@ nonideal：
 | drive_noise_rms | float | 0.0 | V | 驱动电压噪声 RMS；参考: [MZM](physics_models.md#mzm) |
 | bias_error_rad | float | 0.0 | rad | 偏置相位误差；参考: [MZM](physics_models.md#mzm) |
 
+### OpticalFiber
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| length_m | float | 0.0 | m | 光纤长度 L；公式: [FIBER-1](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| alpha_db_per_km | float | 0.0 | dB/km | 衰减系数 α（dB/km）；公式: [FIBER-1](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| beta2_s2_per_m | float | 0.0 | s^2/m | 二阶色散 β2；公式: [FIBER-1](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| beta3_s3_per_m | float | 0.0 | s^3/m | 三阶色散 β3；公式: [FIBER-1](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_steps | int | 1 |  | SSFM 分步数（>1 时启用分步传播）；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_auto | bool | false |  | 自动估计分步数（色散/非线性任一开启时生效）；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_max_phase_rad | float | 0.1 | rad | 自动分步时的最大相位阈值；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_length_frac | float | 0.1 |  | 按色散/非线性长度估计的分步比例；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_auto_mode | enum | fft |  | 自动分步频宽估算方式（fft/fast）；公式: [FIBER-4](physics_models.md#formula_index)；options: fft/fast；参考: [光纤](physics_models.md#fiber) |
+| ssfm_min_steps | int | 1 |  | 自动分步的下限；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| ssfm_max_steps | int | 128 |  | 自动分步的上限；公式: [FIBER-4](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [光纤](physics_models.md#fiber) |
+| pmd_dgd_s | float | 0.0 | s | 偏振模色散 DGD；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_axis_angle_rad | float | 0.0 | rad | PMD 主轴角度；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| birefringence_phi_rad | float | 0.0 | rad | 双折射相位延迟；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_time_vary | bool | false |  | PMD 时变开关（按块更新）；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_dgd_std_s | float | 0.0 | s | DGD 漂移标准差；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_axis_std_rad | float | 0.0 | rad | 主轴角漂移标准差；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_biref_std_rad | float | 0.0 | rad | 双折射相位漂移标准差；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_corr_s | float | 0.0 | s | 漂移相关时间（0 表示独立更新）；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| pmd_update_samples | int | 0 |  | 更新时间窗长度（采样点）；公式: [FIBER-2](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+| nonlin_gamma_w_inv_m | float | 0.0 | 1/W/m | Kerr 系数 γ；公式: [FIBER-3](physics_models.md#formula_index)；参考: [光纤](physics_models.md#fiber) |
+
+### OpticalFilter
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| kind | enum | bandpass |  | 滤波器类型；公式: [FILTER-1](physics_models.md#formula_index)；options: lowpass/highpass/bandpass/bandstop；参考: [光学滤波器](physics_models.md#optical_filter) |
+| shape | enum | gaussian |  | 滤波响应形状；公式: [FILTER-1](physics_models.md#formula_index)；options: rect/gaussian/butter；参考: [光学滤波器](physics_models.md#optical_filter) |
+| phase_mode | enum | none |  | 相位响应模式；公式: [FILTER-2](physics_models.md#formula_index)；options: none/linear/quadratic/minimum；参考: [光学滤波器](physics_models.md#optical_filter) |
+| bandwidth_hz | float | 0.0 | Hz | 带宽或截止频率 B，0 表示不启用滤波；公式: [FILTER-1](physics_models.md#formula_index)；参考: [光学滤波器](physics_models.md#optical_filter) |
+| center_hz | float | 0.0 | Hz | 基带中心频率偏移；公式: [FILTER-1](physics_models.md#formula_index)；参考: [光学滤波器](physics_models.md#optical_filter) |
+| order | int | 2 |  | 滤波阶数（Butterworth）；公式: [FILTER-1](physics_models.md#formula_index)；参考: [光学滤波器](physics_models.md#optical_filter) |
+| group_delay_s | float | 0.0 | s | 群时延；公式: [FILTER-2](physics_models.md#formula_index)；参考: [光学滤波器](physics_models.md#optical_filter) |
+| gdd_s2 | float | 0.0 | s^2 | 群时延色散；公式: [FILTER-2](physics_models.md#formula_index)；参考: [光学滤波器](physics_models.md#optical_filter) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [光学滤波器](physics_models.md#optical_filter) |
+
 ### PD
 params：
 | 参数 | 类型 | 默认 | 单位 | 说明 |
@@ -367,6 +423,85 @@ nonideal：
 | vpi_error_pct | float | 0.0 | % | Vpi 误差百分比；参考: [PM](physics_models.md#pm) |
 | drive_noise_rms | float | 0.0 | V | 驱动电压噪声 RMS；参考: [PM](physics_models.md#pm) |
 | bias_error_rad | float | 0.0 | rad | 偏置相位误差；参考: [PM](physics_models.md#pm) |
+
+### PolarizationController
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| preset | enum | custom |  | 波片组合预设（QHQ/H/Q/custom）；公式: [POL-3](physics_models.md#formula_index)；options: custom/QHQ/H/Q/HWP/QWP；参考: [偏振模型](physics_models.md#polarization) |
+| angle1_rad | float | 0.0 | rad | 第 1 片波片轴角；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| angle2_rad | float | 0.0 | rad | 第 2 片波片轴角；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| angle3_rad | float | 0.0 | rad | 第 3 片波片轴角；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance1_rad | float | 0.0 | rad | 第 1 片相位延迟；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance2_rad | float | 0.0 | rad | 第 2 片相位延迟；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance3_rad | float | 0.0 | rad | 第 3 片相位延迟；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [偏振模型](physics_models.md#polarization) |
+| angle_noise_std_rad | float | 0.0 | rad | 角度扰动标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance_noise_std_rad | float | 0.0 | rad | 相位延迟扰动标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| time_vary | bool | false |  | 时变漂移开关；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| angle_drift_std_rad | float | 0.0 | rad | 角度漂移标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance_drift_std_rad | float | 0.0 | rad | 相位延迟漂移标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_corr_s | float | 0.0 | s | 漂移相关时间；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_update_samples | int | 0 |  | 漂移更新时间窗；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+### PolarizationPDL
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| pdl_db | float | 0.0 | dB | 偏振相关损耗；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| axis_angle_rad | float | 0.0 | rad | PDL 主轴角度；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| loss_db | float | 0.0 | dB | 插入损耗（幅度乘以 10^(-L/20)）；公式: [ATT-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [偏振模型](physics_models.md#polarization) |
+| pdl_noise_std_db | float | 0.0 | dB | PDL 随机扰动标准差；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| axis_noise_std_rad | float | 0.0 | rad | 主轴角随机扰动标准差；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| time_vary | bool | false |  | 时变漂移开关；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| pdl_drift_std_db | float | 0.0 | dB | PDL 漂移标准差；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| axis_drift_std_rad | float | 0.0 | rad | 主轴角漂移标准差；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_corr_s | float | 0.0 | s | 漂移相关时间；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_update_samples | int | 0 |  | 漂移更新时间窗；公式: [POL-2](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+### PolarizationRotator
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| angle_rad | float | 0.0 | rad | 偏振旋转角；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [偏振模型](physics_models.md#polarization) |
+| angle_noise_std_rad | float | 0.0 | rad | 角度随机扰动标准差；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| time_vary | bool | false |  | 时变漂移开关；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| angle_drift_std_rad | float | 0.0 | rad | 角度漂移标准差；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_corr_s | float | 0.0 | s | 漂移相关时间；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_update_samples | int | 0 |  | 漂移更新时间窗；公式: [POL-1](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+### PolarizationWaveplate
+params：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| retardance_rad | float | 0.0 | rad | 相位延迟（波片）；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| axis_angle_rad | float | 0.0 | rad | 波片主轴角；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+
+nonideal：
+| 参数 | 类型 | 默认 | 单位 | 说明 |
+| --- | --- | --- | --- | --- |
+| enable | bool | false |  | 非理想总开关；参考: [偏振模型](physics_models.md#polarization) |
+| axis_noise_std_rad | float | 0.0 | rad | 波片主轴角随机扰动标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance_noise_std_rad | float | 0.0 | rad | 相位延迟随机扰动标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| time_vary | bool | false |  | 时变漂移开关；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| axis_drift_std_rad | float | 0.0 | rad | 主轴角漂移标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| retardance_drift_std_rad | float | 0.0 | rad | 相位延迟漂移标准差；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_corr_s | float | 0.0 | s | 漂移相关时间；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
+| drift_update_samples | int | 0 |  | 漂移更新时间窗；公式: [POL-3](physics_models.md#formula_index)；参考: [偏振模型](physics_models.md#polarization) |
 
 ### RFSource
 params：

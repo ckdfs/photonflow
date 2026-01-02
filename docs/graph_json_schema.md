@@ -39,6 +39,8 @@ Schema 采用 JSON Schema Draft 2020-12 语法。
             {"type": "string", "enum": ["auto"]}
           ]
         },
+        "fs_min": {"type": "number", "minimum": 0},
+        "fs_max": {"type": "number", "minimum": 0},
         "oversample": {"type": "integer", "minimum": 1, "maximum": 32},
         "seed": {"type": "integer", "minimum": 0},
         "window": {
@@ -47,7 +49,9 @@ Schema 采用 JSON Schema Draft 2020-12 语法。
         },
         "chunk": {"type": "integer", "minimum": 0},
         "duration_s": {"type": "number", "exclusiveMinimum": 0},
-        "n_samples": {"type": "integer", "minimum": 2}
+        "n_samples": {"type": "integer", "minimum": 2},
+        "min_samples": {"type": "integer", "minimum": 0},
+        "max_samples": {"type": "integer", "minimum": 0}
       }
     },
     "node": {
