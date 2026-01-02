@@ -1,0 +1,249 @@
+:root {
+  font-family: "Source Serif 4", "IBM Plex Serif", serif;
+  color: #1a1a1a;
+  background: radial-gradient(circle at top, #f5f0e6 0%, #efe8d8 45%, #e2d8c3 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  height: 100vh;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 320px;
+  gap: 12px;
+  height: 100vh;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.canvas {
+  position: relative;
+  background: #fdfbf6;
+  border: 1px solid #d9d0be;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.toolbar {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  padding: 6px 10px;
+  border: 1px solid #c8bfae;
+  background: #fff7e8;
+  border-radius: 8px;
+}
+
+.status-line {
+  font-size: 12px;
+  color: #6b5a42;
+  padding: 4px 6px;
+  background: #fff7e8;
+  border: 1px solid #e3d6bf;
+  border-radius: 8px;
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.graph-stats {
+  font-size: 12px;
+  color: #6b5a42;
+  padding: 4px 6px;
+  background: #fff7e8;
+  border: 1px solid #e3d6bf;
+  border-radius: 8px;
+}
+
+.panel {
+  background: #fffdf8;
+  border: 1px solid #d9d0be;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block-button {
+  background: #f5ead4;
+  border: 1px solid #cdbfa3;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.field-input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #cdbfa3;
+  background: #fffdf8;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #7b6a52;
+  padding: 4px 2px;
+}
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b5a42;
+  margin-top: 8px;
+}
+
+.block-node {
+  min-width: 160px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #cdbfa3;
+  background: #fff8e6;
+  font-size: 12px;
+}
+
+.block-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.block-subtitle {
+  font-size: 10px;
+  color: #7b6a52;
+  margin-bottom: 4px;
+}
+
+.block-ports {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.block-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.port-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  min-height: 18px;
+  padding: 2px 0;
+}
+
+.port {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.port-optical {
+  background: #d45a1a;
+}
+
+.port-electrical {
+  background: #2c6fb8;
+}
+
+.port-control {
+  background: #5a8d3a;
+}
+
+.outputs pre {
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow: auto;
+  background: #f8f2e7;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: #5d4e3a;
+}
+
+.plot-card {
+  background: #fff9ef;
+  border: 1px solid #eadfca;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.plot-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.plot-svg {
+  width: 100%;
+  height: auto;
+}
+
+.plot-axis {
+  font-size: 10px;
+  fill: #6b5a42;
+}
+
+.plot-empty {
+  font-size: 12px;
+  color: #8a7b63;
+  padding: 10px;
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .canvas {
+    height: 60vh;
+  }
+}

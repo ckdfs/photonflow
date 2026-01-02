@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.env
+.venv/
+.vscode/
+.idea/
+.DS_Store
+node_modules/
+frontend/node_modules/
+backend/.pytest_cache/
+backend/.mypy_cache/
