@@ -28,6 +28,11 @@ from photonflow.blocks.electrical.elec_gain import ElecGain
 # Detectors
 from photonflow.blocks.detectors.pd import PD
 
+# Measurement probes
+from photonflow.blocks.measurement.osa_probe import OSAProbe
+from photonflow.blocks.measurement.esa_probe import ESAProbe
+from photonflow.blocks.measurement.scope_probe import ScopeProbe
+
 __all__ = [
     "registry",
     "register_block",
@@ -49,4 +54,7 @@ __all__ = [
     "ElecSplitter",
     "ElecGain",
     "PD",
+    "OSAProbe",
+    "ESAProbe",
+    "ScopeProbe",
 ]

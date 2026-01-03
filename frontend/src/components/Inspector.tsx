@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 interface InspectorProps {
   node: any | null
@@ -17,8 +17,17 @@ const renderField = (
   name: string,
   entry: any,
   value: any,
-  onChange: (section: string, key: string, value: any) => void
+  onChange: (section: string, key: string, value: any) => void,
+  custom?: React.ReactNode
 ) => {
+  if (custom) {
+    return (
+      <label key={name} className="field">
+        <span>{name}</span>
+        {custom}
+      </label>
+    )
+  }
   const type = entry?.type || 'float'
   if (type === 'bool') {
     return (
@@ -68,15 +77,54 @@ export default function Inspector({ node, spec, onChange, labels }: InspectorPro
 
   const params = spec.params || {}
   const nonideal = spec.nonideal || {}
+  const [laserFreqMode, setLaserFreqMode] = useState<'hz' | 'nm'>('hz')
+  const speedOfLight = 299792458
+
+  useEffect(() => {
+    setLaserFreqMode('hz')
+  }, [node?.id])
+
+  const toNm = (hz: number) => (hz > 0 ? (speedOfLight / hz) * 1e9 : 0)
+  const toHz = (nm: number) => (nm > 0 ? speedOfLight / (nm * 1e-9) : 0)
 
   return (
     <div className="panel">
       <div className="panel-title">{labels.title}</div>
       <div className="panel-body">
         <div className="section-title">{labels.params}</div>
-        {Object.entries(params).map(([name, entry]) =>
-          renderField('params', name, entry, node.data.params?.[name], onChange)
-        )}
+        {Object.entries(params).map(([name, entry]) => {
+          if (node.data.type === 'Laser' && name === 'center_freq_hz') {
+            const raw = Number(node.data.params?.[name] ?? entry.default ?? 0)
+            const value = laserFreqMode === 'nm' ? toNm(raw) : raw
+            return renderField(
+              'params',
+              name,
+              entry,
+              raw,
+              onChange,
+              <div className="field-inline">
+                <input
+                  type="number"
+                  value={Number.isFinite(value) ? value : 0}
+                  onChange={(e) => {
+                    const num = Number(e.target.value)
+                    if (!Number.isFinite(num)) return
+                    const hz = laserFreqMode === 'nm' ? toHz(num) : num
+                    onChange('params', name, hz)
+                  }}
+                />
+                <select
+                  value={laserFreqMode}
+                  onChange={(e) => setLaserFreqMode(e.target.value as 'hz' | 'nm')}
+                >
+                  <option value="hz">Hz</option>
+                  <option value="nm">nm</option>
+                </select>
+              </div>
+            )
+          }
+          return renderField('params', name, entry, node.data.params?.[name], onChange)
+        })}
         <div className="section-title">{labels.nonideal}</div>
         {Object.entries(nonideal).map(([name, entry]) =>
           renderField('nonideal', name, entry, node.data.nonideal?.[name], onChange)

@@ -75,12 +75,11 @@
     "outputs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["osa", "esa"],
+      "required": ["extra"],
       "properties": {
-        "osa": {"$ref": "#/$defs/measure_ref"},
-        "esa": {"$ref": "#/$defs/measure_ref"},
         "extra": {
           "type": "array",
+          "minItems": 1,
           "items": {"$ref": "#/$defs/measure_ref"}
         }
       }

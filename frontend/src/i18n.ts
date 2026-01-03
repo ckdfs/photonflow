@@ -14,6 +14,7 @@ const dict: Dict = {
   showExpanded: { en: 'Show Expanded', zh: '显示展开' },
   collapse: { en: 'Collapse', zh: '折叠' },
   delete: { en: 'Delete', zh: '删除' },
+  clearGraph: { en: 'Clear', zh: '清空画布' },
   settings: { en: 'Settings', zh: '设置' },
   language: { en: 'Language', zh: '语言' },
   selectNode: { en: 'Select a node.', zh: '请选择一个节点。' },
@@ -34,6 +35,7 @@ const dict: Dict = {
   searchBlocks: { en: 'Search blocks', zh: '搜索组件' },
   noMatch: { en: 'No matching blocks.', zh: '没有匹配的组件。' },
   noOutputs: { en: 'No output ports.', zh: '没有可用的输出端口。' },
+  noProbes: { en: 'Add probe nodes to see outputs.', zh: '请先添加观测仪器节点。' },
   simSettings: { en: 'Simulation', zh: '仿真设置' },
   advancedSettings: { en: 'Advanced', zh: '高级设置' },
   showAdvanced: { en: 'Show Advanced', zh: '展开高级设置' },
@@ -77,6 +79,12 @@ const dict: Dict = {
   unitHz: { en: 'Hz', zh: 'Hz' },
   unitNm: { en: 'nm', zh: 'nm' },
   unitOffset: { en: 'Offset', zh: '相对载波' },
+  blocksMeasurement: { en: 'Measurement', zh: '观测' },
+  blocksOptical: { en: 'Optical', zh: '光学' },
+  blocksElectrical: { en: 'Electrical', zh: '电学' },
+  blocksDetectors: { en: 'Detectors', zh: '探测' },
+  blocksComposite: { en: 'Composites', zh: '复合器件' },
+  blocksOther: { en: 'Other', zh: '其他' },
   offset: { en: 'Offset', zh: '频偏' },
   carrierCenter: { en: 'Carrier', zh: '载波中心' },
   carrierAuto: { en: 'Auto', zh: '自动' },
@@ -134,7 +142,10 @@ const blockDict: Dict = {
   PolarizationController: { en: 'Polarization Controller', zh: '偏振控制器' },
   PD: { en: 'Photodiode', zh: '光电探测器' },
   ElecSplitter: { en: 'Electrical Splitter', zh: '电分路器' },
-  ElecGain: { en: 'Electrical Gain', zh: '电增益' }
+  ElecGain: { en: 'Electrical Gain', zh: '电增益' },
+  OSAProbe: { en: 'OSA Probe', zh: '光谱仪' },
+  ESAProbe: { en: 'ESA Probe', zh: '电谱仪' },
+  ScopeProbe: { en: 'Scope Probe', zh: '示波器' }
 }
 
 export function blockLabel(type: string, lang: Lang) {

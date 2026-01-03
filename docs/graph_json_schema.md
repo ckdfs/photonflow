@@ -81,12 +81,11 @@ Schema 采用 JSON Schema Draft 2020-12 语法。
     "outputs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["osa", "esa"],
+      "required": ["extra"],
       "properties": {
-        "osa": {"$ref": "#/$defs/measure_ref"},
-        "esa": {"$ref": "#/$defs/measure_ref"},
         "extra": {
           "type": "array",
+          "minItems": 1,
           "items": {"$ref": "#/$defs/measure_ref"}
         }
       }
@@ -109,7 +108,7 @@ Schema 采用 JSON Schema Draft 2020-12 语法。
 ## 说明与约束补充
 - `nodes[].type` 不在 Schema 中枚举，实际可在运行时与 Block 库对齐校验。
 - `params` 与 `nonideal` 的详细字段由 Block 库定义，可通过 UI 动态渲染。
-- `outputs.extra` 可用于多点测量（例如多个 OSA/ESA 节点）。
+- `outputs.extra` 为唯一输出入口，必须至少包含一个观测仪器节点（OSA/ESA/示波器），且 `port` 使用观测仪器的输入端口（`opt_in` / `elec_in`）。
 - `window` 列表可扩展，但建议前后端保持一致。
 
 ## 运行时校验建议（不在 JSON Schema 中）

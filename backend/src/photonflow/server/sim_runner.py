@@ -22,23 +22,29 @@ def run_graph_job(
     sim_cfg = _build_sim_config(graph_data.get("sim", {}), sim_override or {})
     expanded = expand_graph_data(graph_data, composites, annotate=False)
     outputs_spec = expanded.get("outputs", {})
+    input_map = _build_input_map(expanded.get("edges", []))
     chunk = int(getattr(sim_cfg, "chunk", 0) or 0)
     if chunk > 0:
         outputs_chunks = graph.run_chunked(sim_cfg)
         results: Dict[str, Any] = {}
         for key, spec in outputs_spec.items():
             if key == "extra" and isinstance(spec, list):
-                results[key] = [_build_measurement_chunked(outputs_chunks, item, sim_cfg, max_points) for item in spec]
+                results[key] = [
+                    _build_measurement_chunked(outputs_chunks, item, sim_cfg, max_points, input_map)
+                    for item in spec
+                ]
             else:
-                results[key] = _build_measurement_chunked(outputs_chunks, spec, sim_cfg, max_points)
+                results[key] = _build_measurement_chunked(outputs_chunks, spec, sim_cfg, max_points, input_map)
     else:
         outputs = graph.run(sim_cfg)
         results = {}
         for key, spec in outputs_spec.items():
             if key == "extra" and isinstance(spec, list):
-                results[key] = [_build_measurement(outputs, item, sim_cfg, max_points) for item in spec]
+                results[key] = [
+                    _build_measurement(outputs, item, sim_cfg, max_points, input_map) for item in spec
+                ]
             else:
-                results[key] = _build_measurement(outputs, spec, sim_cfg, max_points)
+                results[key] = _build_measurement(outputs, spec, sim_cfg, max_points, input_map)
 
     results["meta"] = {
         "fs": sim_cfg.fs,
@@ -48,6 +54,18 @@ def run_graph_job(
         "chunk": getattr(sim_cfg, "chunk", 0),
     }
     return results
+
+
+def _build_input_map(edges: list[Dict[str, Any]]) -> Dict[Tuple[str, str], Tuple[str, str]]:
+    input_map: Dict[Tuple[str, str], Tuple[str, str]] = {}
+    for edge in edges:
+        dst = edge.get("dst")
+        dst_port = edge.get("dst_port")
+        src = edge.get("src")
+        src_port = edge.get("src_port")
+        if dst and dst_port and src and src_port:
+            input_map[(dst, dst_port)] = (src, src_port)
+    return input_map
 
 
 def _build_sim_config(sim_data: Dict[str, Any], override: Dict[str, Any]) -> SimConfig:
@@ -75,13 +93,14 @@ def _build_measurement(
     spec: Dict[str, Any],
     sim_cfg: SimConfig,
     max_points: int,
+    input_map: Dict[Tuple[str, str], Tuple[str, str]] | None = None,
 ) -> Dict[str, Any]:
     node = spec["node"]
     port = spec["port"]
     kind = spec.get("kind", "osa")
     params = spec.get("params", {})
 
-    signal = outputs.get((node, port))
+    signal = _resolve_signal(outputs, node, port, input_map)
     if signal is None:
         raise ValueError(f"Missing output for {node}:{port}")
 
@@ -108,6 +127,7 @@ def _build_measurement_chunked(
     spec: Dict[str, Any],
     sim_cfg: SimConfig,
     max_points: int,
+    input_map: Dict[Tuple[str, str], Tuple[str, str]] | None = None,
 ) -> Dict[str, Any]:
     node = spec["node"]
     port = spec["port"]
@@ -116,7 +136,7 @@ def _build_measurement_chunked(
 
     signals = []
     for outputs in outputs_chunks:
-        signal = outputs.get((node, port))
+        signal = _resolve_signal(outputs, node, port, input_map)
         if signal is None:
             raise ValueError(f"Missing output for {node}:{port}")
         signals.append(signal)
@@ -139,6 +159,21 @@ def _build_measurement_chunked(
         raise ValueError(f"OSA expects optical signal at {node}:{port}")
     data = _accumulate_spectrum(signals, "osa", window, ref)
     return _format_spectrum("osa", data, max_points, include_power=include_power)
+
+
+def _resolve_signal(
+    outputs: Dict[Tuple[str, str], Signal],
+    node: str,
+    port: str,
+    input_map: Dict[Tuple[str, str], Tuple[str, str]] | None,
+) -> Signal | None:
+    signal = outputs.get((node, port))
+    if signal is not None or not input_map:
+        return signal
+    mapped = input_map.get((node, port))
+    if not mapped:
+        return None
+    return outputs.get(mapped)
 
 
 def _pad_signal(signal: Signal, n_samples: int) -> Signal:

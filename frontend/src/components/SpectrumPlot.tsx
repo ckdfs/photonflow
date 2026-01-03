@@ -135,8 +135,26 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
         carrierFreq: 0
       }
     }
-    const dataMinX = Math.min(...data.freq)
-    const dataMaxX = Math.max(...data.freq)
+    let sourceFreq = data.freq
+    let sourcePower = data.power_db
+    let sourceRel = data.freq_rel ?? []
+    if (!isOptical) {
+      const filteredFreq: number[] = []
+      const filteredPower: number[] = []
+      data.freq.forEach((f, i) => {
+        if (f >= 0) {
+          filteredFreq.push(f)
+          filteredPower.push(data.power_db[i])
+        }
+      })
+      if (filteredFreq.length >= 2) {
+        sourceFreq = filteredFreq
+        sourcePower = filteredPower
+        sourceRel = []
+      }
+    }
+    const dataMinX = Math.min(...sourceFreq)
+    const dataMaxX = Math.max(...sourceFreq)
     const carrierFreq = carrierRefHz
     let viewMinX = dataMinX
     let viewMaxX = dataMaxX
@@ -164,24 +182,24 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
     const filteredFreq: number[] = []
     const filteredPower: number[] = []
     const filteredRel: number[] = []
-    data.freq.forEach((f, i) => {
+    sourceFreq.forEach((f, i) => {
       if (f >= viewMinX && f <= viewMaxX) {
         filteredFreq.push(f)
-        filteredPower.push(data.power_db[i])
-        if (hasFreqRel && data.freq_rel) {
-          filteredRel.push(data.freq_rel[i])
+        filteredPower.push(sourcePower[i])
+        if (hasFreqRel && sourceRel.length) {
+          filteredRel.push(sourceRel[i])
         }
       }
     })
     let usedFreq = filteredFreq
     let usedPower = filteredPower
-    let usedFreqRel = hasFreqRel && data.freq_rel ? filteredRel : []
+    let usedFreqRel = hasFreqRel && sourceRel.length ? filteredRel : []
     let usedMinX = viewMinX
     let usedMaxX = viewMaxX
     if (usedFreq.length < 2) {
-      usedFreq = data.freq
-      usedPower = data.power_db
-      usedFreqRel = hasFreqRel && data.freq_rel ? data.freq_rel : []
+      usedFreq = sourceFreq
+      usedPower = sourcePower
+      usedFreqRel = hasFreqRel && sourceRel.length ? sourceRel : []
       usedMinX = dataMinX
       usedMaxX = dataMaxX
     }
@@ -363,7 +381,15 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
   const resolveMarker = (targetAbs: number) => {
     if (!data || data.freq.length === 0) return null
     let idx = 0
-    if (hasFreqRel && centerFreqHz !== null && data.freq_rel) {
+    if (!isOptical) {
+      const start = data.freq.findIndex((f) => f >= 0)
+      if (start >= 0) {
+        const freqSlice = data.freq.slice(start)
+        idx = start + closestIndex(freqSlice, targetAbs)
+      } else {
+        idx = closestIndex(data.freq, targetAbs)
+      }
+    } else if (hasFreqRel && centerFreqHz !== null && data.freq_rel) {
       const targetRel = targetAbs - centerFreqHz
       idx = closestIndex(data.freq_rel, targetRel)
     } else {

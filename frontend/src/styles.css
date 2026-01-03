@@ -178,6 +178,41 @@ body {
   text-align: left;
 }
 
+.block-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.block-group:first-of-type {
+  margin-top: 6px;
+}
+
+.block-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5d4e3a;
+  margin-bottom: 2px;
+}
+
+.block-button--measure {
+  position: relative;
+  padding-left: 20px;
+}
+
+.block-button--measure::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2c6fb8;
+  transform: translateY(-50%);
+}
+
 .field {
   display: grid;
   grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
@@ -200,6 +235,20 @@ body {
   font-family: inherit;
   font-size: 12px;
   box-sizing: border-box;
+}
+
+.field-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.field-inline input {
+  flex: 1;
+}
+
+.field-inline select {
+  width: 80px;
 }
 
 .field-input {

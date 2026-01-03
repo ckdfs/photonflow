@@ -5,6 +5,8 @@ interface BlockLibraryProps {
   onAdd: (type: string) => void
   title: string
   labelForType: (type: string) => string
+  groups?: { id: string; title: string; types: string[] }[]
+  typeStyles?: Record<string, string>
   searchPlaceholder: string
   noMatchText: string
 }
@@ -14,6 +16,8 @@ export default function BlockLibrary({
   onAdd,
   title,
   labelForType,
+  groups,
+  typeStyles,
   searchPlaceholder,
   noMatchText
 }: BlockLibraryProps) {
@@ -26,6 +30,16 @@ export default function BlockLibrary({
       return label.includes(q) || type.toLowerCase().includes(q)
     })
   }, [labelForType, query, types])
+  const filteredSet = useMemo(() => new Set(filtered), [filtered])
+  const grouped = useMemo(() => {
+    if (!groups) return null
+    return groups
+      .map((group) => ({
+        ...group,
+        types: group.types.filter((type) => filteredSet.has(type))
+      }))
+      .filter((group) => group.types.length > 0)
+  }, [filteredSet, groups])
 
   return (
     <div className="panel">
@@ -39,9 +53,24 @@ export default function BlockLibrary({
         />
         {filtered.length === 0 ? (
           <div className="hint">{noMatchText}</div>
+        ) : grouped ? (
+          grouped.map((group) => (
+            <div key={group.id} className="block-group">
+              <div className="block-group-title">{group.title}</div>
+              {group.types.map((type) => (
+                <button
+                  key={type}
+                  className={`block-button ${typeStyles?.[type] ?? ''}`.trim()}
+                  onClick={() => onAdd(type)}
+                >
+                  {labelForType(type)}
+                </button>
+              ))}
+            </div>
+          ))
         ) : (
           filtered.map((type) => (
-            <button key={type} className="block-button" onClick={() => onAdd(type)}>
+            <button key={type} className={`block-button ${typeStyles?.[type] ?? ''}`.trim()} onClick={() => onAdd(type)}>
               {labelForType(type)}
             </button>
           ))

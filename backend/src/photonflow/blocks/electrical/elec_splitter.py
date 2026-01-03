@@ -24,7 +24,10 @@ class ElecSplitter(BaseBlock):
     }
 
     def process(self, inputs: Dict[str, Signal], ctx: SimContext) -> Dict[str, Signal]:
-        elec_in = inputs["elec_in"]
+        elec_in = inputs.get("elec_in")
+        if elec_in is None:
+            data = torch.zeros(ctx.n_samples, device=ctx.device)
+            elec_in = Signal(data=data, fs=ctx.fs, t0=ctx.t0)
         nonideal = self.nonideal if self.nonideal.get("enable", False) else {}
         imbalance_db = float(nonideal.get("imbalance_db", 0.0))
         ratio = 10 ** (imbalance_db / 20.0)

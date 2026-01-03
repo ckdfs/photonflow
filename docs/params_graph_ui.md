@@ -112,19 +112,33 @@ Graph 中的参数值示例（项目 JSON 内保存）：
       "nonideal": {"enable": true, "loss_db": 2.0}
     },
     {
+      "id": "osa1",
+      "type": "OSAProbe",
+      "params": {"window": "hann", "ref": 1.0, "include_power": true}
+    },
+    {
       "id": "pd1",
       "type": "PD",
       "params": {"responsivity": 0.8, "bandwidth_hz": 40e9},
       "nonideal": {"enable": true}
+    },
+    {
+      "id": "esa1",
+      "type": "ESAProbe",
+      "params": {"window": "hann", "ref": 1.0}
     }
   ],
   "edges": [
     {"src": "laser1", "src_port": "opt_out", "dst": "pm1", "dst_port": "opt_in"},
-    {"src": "pm1", "src_port": "opt_out", "dst": "pd1", "dst_port": "opt_in"}
+    {"src": "pm1", "src_port": "opt_out", "dst": "pd1", "dst_port": "opt_in"},
+    {"src": "pm1", "src_port": "opt_out", "dst": "osa1", "dst_port": "opt_in"},
+    {"src": "pd1", "src_port": "elec_out", "dst": "esa1", "dst_port": "elec_in"}
   ],
   "outputs": {
-    "osa": {"node": "pm1", "port": "opt_out", "kind": "osa", "params": {"include_power": true}},
-    "esa": {"node": "pd1", "port": "elec_out", "kind": "esa"}
+    "extra": [
+      {"node": "osa1", "port": "opt_in", "kind": "osa"},
+      {"node": "esa1", "port": "elec_in", "kind": "esa"}
+    ]
   }
 }
 ```
@@ -133,6 +147,8 @@ Graph 中的参数值示例（项目 JSON 内保存）：
 - 复合节点（MZM、DPMZM）允许直接出现在 nodes 中，编译器会展开。
 - 端口由 Block 类型固定，编译时做兼容性校验。
 - 输出 `kind` 支持：`osa` / `esa` / `time`（时域预览）。
+- 输出必须通过观测仪器节点（如 OSAProbe/ESAProbe/ScopeProbe）接入，并通过 `outputs.extra` 指定；`port` 使用观测仪器的输入端口（`opt_in` / `elec_in`）。
+- 观测仪器只包含输入端口，可并联在链路中，不改变信号流向。
 - 输出参数 `params` 可包含 `window` / `ref` / `include_power`。
 
 输出参数 `params`（OSA/ESA）：
