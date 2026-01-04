@@ -13,13 +13,16 @@ if (-not $SkipBackend) {
     Write-Host "Building Backend..." -ForegroundColor Cyan
     Set-Location backend
     
-    # Check for conda
-    if (Get-Command conda -ErrorAction SilentlyContinue) {
-        Write-Host "Using Conda environment 'photonflow'..."
-        # conda run captures output, so we use --no-capture-output if possible, 
-        # but on Windows conda run behavior can be tricky. 
-        # Simple approach: assume user is in the env or use conda run.
-        conda run -n photonflow pyinstaller photonflow.spec --log-level=INFO --noconfirm
+    # Check if we are already in the photonflow environment
+    if ($env:CONDA_DEFAULT_ENV -eq "photonflow") {
+        Write-Host "Already in 'photonflow' environment. Running PyInstaller directly..."
+        pyinstaller photonflow.spec --log-level=INFO --noconfirm
+    }
+    # Check for conda command if not in env
+    elseif (Get-Command conda -ErrorAction SilentlyContinue) {
+        Write-Host "Using Conda environment 'photonflow' via conda run..."
+        # Use --no-capture-output to stream logs
+        conda run -n photonflow --no-capture-output pyinstaller photonflow.spec --log-level=INFO --noconfirm
     } else {
         Write-Host "Using current Python environment..."
         pyinstaller photonflow.spec --log-level=INFO --noconfirm

@@ -29,6 +29,21 @@ try:
     if __name__ == "__main__":
         multiprocessing.freeze_support()
         
+        # Debug: Log Parent PID periodically to see if we can use it for watchdog
+        import threading
+        import time
+        def log_ppid():
+            while True:
+                try:
+                    ppid = os.getppid()
+                    logging.info(f"Current PPID: {ppid}")
+                except Exception as e:
+                    logging.error(f"Failed to get PPID: {e}")
+                time.sleep(5)
+        
+        debug_thread = threading.Thread(target=log_ppid, daemon=True)
+        debug_thread.start()
+
         port = 8000
         if len(sys.argv) > 1:
             try:
@@ -37,8 +52,23 @@ try:
                 pass
                 
         logging.info(f"Starting server on port {port}...")
+        
+        # Add stdout handler so user can see logs in terminal
+        root_logger = logging.getLogger()
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)
+
         # Use log_config=None to prevent uvicorn from overwriting our logging config
-        uvicorn.run(app, host="127.0.0.1", port=port, log_config=None)
+        try:
+            # Explicitly use asyncio loop to avoid auto-detection issues in frozen app
+            uvicorn.run(app, host="127.0.0.1", port=port, log_config=None, workers=1, loop="asyncio")
+            logging.info("Uvicorn run finished normally.")
+        except Exception as e:
+            logging.error(f"Uvicorn run failed: {e}", exc_info=True)
+            raise
 
 except Exception as e:
     logging.error("Failed to start server", exc_info=True)

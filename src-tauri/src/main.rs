@@ -3,7 +3,6 @@
   windows_subsystem = "windows"
 )]
 
-use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 
