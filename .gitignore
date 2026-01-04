@@ -12,3 +12,16 @@ node_modules/
 frontend/node_modules/
 backend/.pytest_cache/
 backend/.mypy_cache/
+
+# Python / PyInstaller
+backend/build/
+backend/dist/
+
+# Frontend build
+frontend/dist/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+src-tauri/binaries/
+**/*.log

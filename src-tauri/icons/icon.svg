@@ -1,0 +1,16 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="open_grad" x1="0" y1="64" x2="128" y2="64" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#0038A8" stop-opacity="0"/> <stop offset="0.3" stop-color="#0066FF"/>
+            <stop offset="1" stop-color="#00FFFF"/> </linearGradient>
+        
+        <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+    </defs>
+
+    <path d="M20 90 C 50 90, 64 64, 64 64 C 64 64, 80 38, 100 38 C 120 38, 120 64, 100 75 C 80 86, 60 50, 90 30" 
+          stroke="url(#open_grad)" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+</svg>

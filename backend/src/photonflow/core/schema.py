@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -13,7 +15,13 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 def load_graph_schema() -> Dict[str, Any]:
-    schema_path = Path(__file__).resolve().parent.parent / "schema" / "graph_schema.json"
+    if getattr(sys, 'frozen', False):
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = Path(sys._MEIPASS)
+        schema_path = base_path / "photonflow" / "schema" / "graph_schema.json"
+    else:
+        schema_path = Path(__file__).resolve().parent.parent / "schema" / "graph_schema.json"
+        
     with schema_path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
 

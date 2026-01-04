@@ -6,6 +6,7 @@ import asyncio
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 
 from photonflow.blocks import registry
@@ -65,6 +66,14 @@ class GraphExpandResponse(BaseModel):
 
 job_manager = JobManager(max_workers=2)
 app = FastAPI(title="PhotonFlow API", version="0.1")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

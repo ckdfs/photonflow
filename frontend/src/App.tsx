@@ -75,7 +75,19 @@ export default function App() {
   }, [nodes])
 
   useEffect(() => {
-    api.get('/blocks/specs').then((res) => setSpecs(res.data))
+    const fetchSpecs = () => {
+      api.get('/blocks/specs')
+        .then((res) => {
+          setSpecs(res.data)
+          setStatus('Connected to backend')
+        })
+        .catch((err) => {
+          console.error('Failed to fetch specs:', err)
+          setStatus(`Connecting... (${err.message})`)
+          setTimeout(fetchSpecs, 1000)
+        })
+    }
+    fetchSpecs()
   }, [])
 
   useEffect(() => {
