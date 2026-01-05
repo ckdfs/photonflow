@@ -41,15 +41,65 @@ else
     cd ..
 fi
 
-# 2. Prepare Sidecar
+# 2. Prepare Sidecar (--onedir mode)
 echo "Preparing Sidecar..."
 mkdir -p src-tauri/binaries
-# Detect architecture (simplified for x86_64 linux)
-TARGET="x86_64-unknown-linux-gnu"
-if [ -f "backend/dist/photonflow-server" ]; then
-    cp backend/dist/photonflow-server src-tauri/binaries/server-$TARGET
+
+# Detect target triple
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$OS" in
+    linux)
+        case "$ARCH" in
+            x86_64) TARGET="x86_64-unknown-linux-gnu" ;;
+            aarch64) TARGET="aarch64-unknown-linux-gnu" ;;
+            *) TARGET="$ARCH-unknown-linux-gnu" ;;
+        esac
+        EXT=""
+        ;;
+    darwin)
+        case "$ARCH" in
+            x86_64) TARGET="x86_64-apple-darwin" ;;
+            arm64) TARGET="aarch64-apple-darwin" ;;
+            *) TARGET="$ARCH-apple-darwin" ;;
+        esac
+        EXT=""
+        ;;
+    *)
+        echo "Unsupported OS: $OS"
+        exit 1
+        ;;
+esac
+
+# --onedir mode: PyInstaller generates a directory with exe and dependencies
+SOURCE_DIR="backend/dist/photonflow-server"
+
+if [ -d "$SOURCE_DIR" ]; then
+    # Clean old binaries directory content
+    rm -rf src-tauri/binaries/*
+    
+    # Copy all files from onedir output to binaries folder
+    # This includes the exe and all its dependencies
+    cp -r "$SOURCE_DIR"/* src-tauri/binaries/
+    
+    # Rename the executable to match Tauri's naming convention
+    SOURCE_EXE="src-tauri/binaries/photonflow-server$EXT"
+    DEST_EXE="src-tauri/binaries/server-$TARGET$EXT"
+    if [ -f "$SOURCE_EXE" ]; then
+        mv "$SOURCE_EXE" "$DEST_EXE"
+        chmod +x "$DEST_EXE"
+        echo "Sidecar prepared at $DEST_EXE (with dependencies)"
+    else
+        echo "Error: photonflow-server not found in $SOURCE_DIR"
+        exit 1
+    fi
 else
-    echo "Warning: Backend binary not found. If you skipped backend build, ensure it was built previously."
+    if [ "$SKIP_BACKEND" = true ]; then
+        echo "Warning: Backend directory not found. Ensure it was built previously."
+    else
+        echo "Error: Source directory not found at $SOURCE_DIR. PyInstaller --onedir should create this."
+        exit 1
+    fi
 fi
 
 # 3. Build Frontend
@@ -65,13 +115,27 @@ fi
 
 # 4. Build Tauri App
 echo "Building Tauri App..."
+
+# Determine bundle type based on OS
+case "$OS" in
+    linux)
+        BUNDLE_TYPE="deb"
+        ;;
+    darwin)
+        BUNDLE_TYPE="dmg"
+        ;;
+    *)
+        BUNDLE_TYPE="all"
+        ;;
+esac
+
 # Use the local tauri cli installed in frontend
 if [ -f "frontend/node_modules/.bin/tauri" ]; then
-    ./frontend/node_modules/.bin/tauri build
+    ./frontend/node_modules/.bin/tauri build --bundles "$BUNDLE_TYPE"
 elif command -v cargo-tauri &> /dev/null; then
-    cargo-tauri build
+    cargo-tauri build --bundles "$BUNDLE_TYPE"
 else
-    cargo tauri build
+    cargo tauri build --bundles "$BUNDLE_TYPE"
 fi
 
 echo "Build Complete!"

@@ -36,7 +36,7 @@ if (-not $SkipBackend) {
     Write-Host "Skipping Backend Build..." -ForegroundColor Yellow
 }
 
-# 2. Prepare Sidecar
+# 2. Prepare Sidecar (--onedir mode)
 Write-Host "Preparing Sidecar..." -ForegroundColor Cyan
 $BinDir = "src-tauri/binaries"
 if (-not (Test-Path $BinDir)) {
@@ -45,17 +45,32 @@ if (-not (Test-Path $BinDir)) {
 
 # Target triple for Windows (x86_64-pc-windows-msvc)
 $Target = "x86_64-pc-windows-msvc"
-$SourceExe = "backend/dist/photonflow-server.exe"
-$DestExe = "$BinDir/server-$Target.exe"
 
-if (Test-Path $SourceExe) {
-    Copy-Item -Path $SourceExe -Destination $DestExe -Force
-    Write-Host "Sidecar copied to $DestExe" -ForegroundColor Green
+# --onedir mode: PyInstaller generates a directory with exe and dependencies
+$SourceDir = "backend/dist/photonflow-server"
+
+if (Test-Path $SourceDir) {
+    # Clean old binaries directory content
+    Get-ChildItem -Path $BinDir -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    
+    # Copy all files from onedir output to binaries folder
+    # This includes the exe and all its dependencies (DLLs, etc.)
+    Copy-Item -Path "$SourceDir\*" -Destination $BinDir -Recurse -Force
+    
+    # Rename the exe to match Tauri's externalBin naming convention
+    $SourceExe = "$BinDir/photonflow-server.exe"
+    $DestExe = "$BinDir/server-$Target.exe"
+    if (Test-Path $SourceExe) {
+        Move-Item -Path $SourceExe -Destination $DestExe -Force
+        Write-Host "Sidecar prepared at $DestExe (with dependencies)" -ForegroundColor Green
+    } else {
+        Write-Error "photonflow-server.exe not found in $SourceDir"
+    }
 } else {
     if (-not $SkipBackend) {
-        Write-Error "Source executable not found at $SourceExe"
+        Write-Error "Source directory not found at $SourceDir. PyInstaller --onedir should create this."
     } else {
-        Write-Warning "Backend binary not found. Ensure it was built previously."
+        Write-Warning "Backend directory not found. Ensure it was built previously."
     }
 }
 
@@ -73,18 +88,13 @@ if (-not $SkipFrontend) {
 # 4. Build Tauri App
 Write-Host "Building Tauri App..." -ForegroundColor Cyan
 
-# Ensure targets are correct for Windows in tauri.conf.json
-# We can't easily edit JSON with regex safely, but we assume the user handles it or defaults are ok.
-# If targets was set to ["deb"] on Linux, it might fail on Windows or produce nothing.
-# Ideally, tauri.conf.json should use "targets": "all" or platform specific overrides if supported (v2 supports it).
-
 # Check for local tauri
 if (Test-Path "frontend/node_modules/.bin/tauri.cmd") {
-    & .\frontend\node_modules\.bin\tauri.cmd build
+    & .\frontend\node_modules\.bin\tauri.cmd build --bundles msi
 } elseif (Get-Command cargo-tauri -ErrorAction SilentlyContinue) {
-    cargo-tauri build
+    cargo-tauri build --bundles msi
 } else {
-    cargo tauri build
+    cargo tauri build --bundles msi
 }
 
 Write-Host "Build Complete!" -ForegroundColor Green

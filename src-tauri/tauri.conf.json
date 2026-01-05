@@ -44,8 +44,8 @@
       "icons/icon.png",
       "icons/icon.ico"
     ],
-    "externalBin": [
-      "binaries/server"
+    "resources": [
+      "binaries"
     ]
   }
 }

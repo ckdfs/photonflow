@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+# Using --onedir mode for faster startup (avoids extraction on each launch)
 
 block_cipher = None
 
@@ -31,13 +32,12 @@ a = Analysis(
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+# --onedir mode: EXE without bundled binaries/datas
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
+    [],  # No binaries bundled in exe
+    exclude_binaries=True,  # Key for onedir mode
     name='photonflow-server',
     debug=False,
     bootloader_ignore_signals=False,
@@ -51,6 +51,17 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    version='version_info.txt',
     icon='../src-tauri/icons/icon.ico',
+)
+
+# Collect all files into a directory
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='photonflow-server',
 )

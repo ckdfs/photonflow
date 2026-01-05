@@ -58,11 +58,64 @@ fn main() {
           stage: "init".to_string(),
       });
 
-      // 启动Python后端sidecar
-      let (mut rx, child) = app.shell().sidecar("server")
-        .expect("failed to create server binary command")
+      // Get the path to the backend executable
+      // In production, it's in resources/binaries/server-{triple}[.exe]
+      // The _internal directory must be in the same folder as the exe
+      let backend_dir = if cfg!(debug_assertions) {
+          // Dev mode: use local binaries directory
+          std::env::current_dir()
+              .unwrap()
+              .join("src-tauri")
+              .join("binaries")
+      } else {
+          // Production: use resource directory
+          app.path().resource_dir()
+              .expect("Failed to get resource directory")
+              .join("binaries")
+      };
+      
+      // Determine target triple based on platform and architecture
+      let target_triple = if cfg!(target_os = "windows") {
+          #[cfg(target_arch = "x86_64")]
+          { "x86_64-pc-windows-msvc" }
+          #[cfg(target_arch = "aarch64")]
+          { "aarch64-pc-windows-msvc" }
+      } else if cfg!(target_os = "macos") {
+          #[cfg(target_arch = "x86_64")]
+          { "x86_64-apple-darwin" }
+          #[cfg(target_arch = "aarch64")]
+          { "aarch64-apple-darwin" }
+      } else if cfg!(target_os = "linux") {
+          #[cfg(target_arch = "x86_64")]
+          { "x86_64-unknown-linux-gnu" }
+          #[cfg(target_arch = "aarch64")]
+          { "aarch64-unknown-linux-gnu" }
+      } else {
+          panic!("Unsupported platform")
+      };
+      
+      let exe_name = if cfg!(windows) {
+          format!("server-{}.exe", target_triple)
+      } else {
+          format!("server-{}", target_triple)
+      };
+      
+      let backend_exe = backend_dir.join(&exe_name);
+      
+      if !backend_exe.exists() {
+          eprintln!("Backend executable not found at: {:?}", backend_exe);
+          let _ = app_handle.emit("loading-error", LoadingError {
+              message: format!("Backend not found: {:?}", backend_exe),
+          });
+          return Ok(());
+      }
+
+      // Use Command instead of sidecar to preserve working directory
+      let (mut rx, child) = app.shell()
+        .command(backend_exe.to_string_lossy().to_string())
+        .current_dir(backend_dir)  // Critical: set working directory
         .spawn()
-        .expect("Failed to spawn sidecar");
+        .expect("Failed to spawn backend");
 
       // 保存 child 进程句柄到应用状态
       app.manage(SidecarState {

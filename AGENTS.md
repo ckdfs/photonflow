@@ -116,6 +116,19 @@ conda run -n photonflow bash -lc "PYTHONPATH=backend/src python backend/scripts/
 - `main.rs`: `app.shell().sidecar("server")`
 - Binary file: `src-tauri/binaries/server-{target-triple}.exe`
 
+### PyInstaller --onedir Mode
+The backend uses `--onedir` mode for faster startup (no extraction needed on each launch):
+- `photonflow.spec` uses `COLLECT` to generate a directory instead of single exe
+- Build script copies all files from `backend/dist/photonflow-server/` to `src-tauri/binaries/`
+- The exe is renamed to `server-{target-triple}.exe`
+- All dependencies (DLLs, PyTorch libs in `_internal/`) are in `binaries/` directory
+- Tauri uses `resources` to bundle the entire `binaries/` directory
+- Rust code uses `Command` API instead of `sidecar()` to preserve working directory
+
+**Important**: Due to PyTorch size (~2.5GB), only MSI packaging is used (NSIS has size limits).
+- Build generates MSI installer (~1.9GB)
+- If CUDA is not needed, consider CPU-only PyTorch to reduce size
+
 ### Common Pitfalls
 1. **Bundle Identifier**: Don't use `.app` suffix (conflicts with macOS)
 2. **Process Cleanup**: Always kill sidecar processes before rebuilding
