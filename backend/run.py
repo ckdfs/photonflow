@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""PhotonFlow backend server entry point with loading progress."""
 import uvicorn
 import sys
 import os
@@ -6,11 +8,17 @@ import traceback
 import logging
 import tempfile
 
+def emit_stage(stage: str) -> None:
+    """Emit loading stage marker for Tauri to parse."""
+    print(f"STAGE:{stage}", flush=True)
+
 # Setup logging to a temp file so we can debug even if stdout is lost
 log_file = os.path.join(tempfile.gettempdir(), 'photonflow_server.log')
 logging.basicConfig(filename=log_file, level=logging.DEBUG, filemode='w')
 
 logging.info("Starting run.py")
+emit_stage("init")
+
 logging.info(f"CWD: {os.getcwd()}")
 logging.info(f"sys.path: {sys.path}")
 logging.info(f"Frozen: {getattr(sys, 'frozen', False)}")
@@ -23,8 +31,15 @@ try:
         sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
     logging.info("Importing app...")
+    emit_stage("imports")
     from photonflow.server.app import app
     logging.info("App imported successfully.")
+    
+    # Ensure blocks are registered
+    emit_stage("blocks")
+    from photonflow.blocks import registry
+    _ = registry.types()  # Trigger block registration
+    logging.info(f"Registered {len(registry.types())} block types")
 
     if __name__ == "__main__":
         multiprocessing.freeze_support()
@@ -52,6 +67,7 @@ try:
                 pass
                 
         logging.info(f"Starting server on port {port}...")
+        emit_stage("server")
         
         # Add stdout handler so user can see logs in terminal
         root_logger = logging.getLogger()
@@ -61,10 +77,22 @@ try:
         handler.setFormatter(formatter)
         root_logger.addHandler(handler)
 
+        # Add startup event to emit ready signal
+        @app.on_event("startup")
+        async def on_startup():
+            emit_stage("ready")
+            logging.info("Server is ready")
+
         # Use log_config=None to prevent uvicorn from overwriting our logging config
         try:
             # Explicitly use asyncio loop to avoid auto-detection issues in frozen app
-            uvicorn.run(app, host="127.0.0.1", port=port, log_config=None, workers=1, loop="asyncio")
+            uvicorn.run(
+                app, 
+                host="127.0.0.1", 
+                port=port, 
+                log_config=None, 
+                loop="asyncio"
+            )
             logging.info("Uvicorn run finished normally.")
         except Exception as e:
             logging.error(f"Uvicorn run failed: {e}", exc_info=True)

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhotonFlow Loading</title>
+  <style>
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
+    }
+    
+    .logo {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 30px;
+      animation: pulse 2s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(79, 172, 254, 0.3));
+    }
+    
+    @keyframes pulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1; 
+      }
+      50% { 
+        transform: scale(1.05); 
+        opacity: 0.8; 
+      }
+    }
+    
+    h1 {
+      font-size: 32px;
+      font-weight: 300;
+      margin-bottom: 30px;
+      letter-spacing: 4px;
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .progress-container {
+      width: 320px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+      border-radius: 3px;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 10px rgba(79, 172, 254, 0.5);
+    }
+    
+    .status {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      min-height: 24px;
+      text-align: center;
+      transition: color 0.3s ease;
+      margin-top: 16px;
+    }
+    
+    .status.error {
+      color: #ff6b6b;
+    }
+    
+    .version {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.3);
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+    }
+    
+    .percentage {
+      margin-left: 12px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 500;
+      line-height: 6px;
+    }
+    
+    .progress-wrapper {
+      display: flex;
+      align-items: center;
+      margin-top: 0px;
+    }
+  </style>
+</head>
+<body>
+  <img src="/icons/icon.png" alt="PhotonFlow" class="logo" />
+  <div class="version">v0.1.0</div>
+  <h1>PHOTONFLOW</h1>
+  
+  <div class="progress-wrapper">
+    <div class="progress-container">
+      <div class="progress-bar" id="progress"></div>
+    </div>
+    <span class="percentage" id="percentage">0%</span>
+  </div>
+  
+  <div class="status" id="status">正在初始化...</div>
+  
+  <script type="module">
+    import { listen } from '@tauri-apps/api/event';
+    
+    const progressBar = document.getElementById('progress');
+    const statusText = document.getElementById('status');
+    const percentageText = document.getElementById('percentage');
+    
+    // 加载阶段配置
+    const stages = {
+      'init': { 
+        progress: 10, 
+        text: '正在初始化运行时...' 
+      },
+      'imports': { 
+        progress: 30, 
+        text: '正在加载 Python 模块...' 
+      },
+      'blocks': { 
+        progress: 50, 
+        text: '正在注册光学和电学模块...' 
+      },
+      'server': { 
+        progress: 70, 
+        text: '正在启动 HTTP 服务器...' 
+      },
+      'ready': { 
+        progress: 100, 
+        text: '加载完成，即将启动主界面...' 
+      }
+    };
+    
+    // 监听加载进度
+    listen('loading-progress', (event) => {
+      console.log('Loading progress:', event.payload);
+      const stage = event.payload.stage;
+      const info = stages[stage];
+      
+      if (info) {
+        progressBar.style.width = info.progress + '%';
+        percentageText.textContent = info.progress + '%';
+        statusText.textContent = info.text;
+        statusText.classList.remove('error');
+      }
+    });
+    
+    // 监听加载错误
+    listen('loading-error', (event) => {
+      console.error('Loading error:', event.payload);
+      statusText.textContent = '启动失败: ' + event.payload.message;
+      statusText.classList.add('error');
+    });
+    
+    // 初始状态
+    console.log('Splash screen initialized');
+  </script>
+</body>
+</html>
