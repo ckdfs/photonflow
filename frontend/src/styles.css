@@ -253,12 +253,14 @@ body {
 
 .field-input {
   width: 100%;
+  max-width: 100%;
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid #cdbfa3;
   background: #fffdf8;
   font-family: inherit;
   font-size: 12px;
+  box-sizing: border-box;
 }
 
 .hint {

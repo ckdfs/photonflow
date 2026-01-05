@@ -162,9 +162,6 @@ export default function App() {
       { id: 'measurement', title: t('blocksMeasurement'), types: pick(['OSAProbe', 'ESAProbe', 'ScopeProbe']) },
       { id: 'optical', title: t('blocksOptical'), types: pick([
         'Laser',
-        'PM',
-        'MZM',
-        'DPMZM',
         'Coupler',
         'PhaseShifter',
         'Attenuator',
@@ -175,9 +172,9 @@ export default function App() {
         'PolarizationWaveplate',
         'PolarizationController'
       ]) },
-      { id: 'electrical', title: t('blocksElectrical'), types: pick(['RFSource', 'DCSource', 'ElecSplitter', 'ElecGain']) },
-      { id: 'detector', title: t('blocksDetectors'), types: pick(['PD']) },
-      { id: 'composite', title: t('blocksComposite'), types: pick(['MZMComposite', 'DPMZMComposite']) }
+      { id: 'eo', title: t('blocksEO'), types: pick(['PM', 'MZMComposite', 'DPMZMComposite']) },
+      { id: 'oe', title: t('blocksOE'), types: pick(['PD']) },
+      { id: 'electrical', title: t('blocksElectrical'), types: pick(['RFSource', 'DCSource', 'ElecSplitter', 'ElecGain']) }
     ]
     const used = new Set(groups.flatMap((group) => group.types))
     const other = allTypes.filter((type) => !used.has(type))

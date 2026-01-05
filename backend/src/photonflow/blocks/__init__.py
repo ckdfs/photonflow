@@ -5,8 +5,8 @@ from photonflow.blocks.base import registry, register_block
 # Optical blocks
 from photonflow.blocks.optical.laser import Laser
 from photonflow.blocks.optical.pm import PM
-from photonflow.blocks.optical.mzm import MZM
-from photonflow.blocks.optical.dpmzm import DPMZM
+# from photonflow.blocks.optical.mzm import MZM  # Deprecated: use MZMComposite
+# from photonflow.blocks.optical.dpmzm import DPMZM  # Deprecated: use DPMZMComposite
 from photonflow.blocks.optical.coupler import Coupler
 from photonflow.blocks.optical.phase_shifter import PhaseShifter
 from photonflow.blocks.optical.attenuator import Attenuator
@@ -38,8 +38,8 @@ __all__ = [
     "register_block",
     "Laser",
     "PM",
-    "MZM",
-    "DPMZM",
+    # "MZM",  # Deprecated: use MZMComposite
+    # "DPMZM",  # Deprecated: use DPMZMComposite
     "Coupler",
     "PhaseShifter",
     "Attenuator",

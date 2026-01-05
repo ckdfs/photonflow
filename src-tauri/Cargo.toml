@@ -5,6 +5,9 @@ description = "PhotonFlow Desktop App"
 authors = ["you"]
 edition = "2021"
 
+[package.metadata.tauri]
+product_name = "PhotonFlow"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
