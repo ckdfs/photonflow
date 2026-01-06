@@ -1,0 +1,12 @@
+{
+  "name": "photonflow",
+  "version": "0.1.0",
+  "description": "PhotonFlow C++ Backend - High-performance optical simulation engine",
+  "dependencies": [
+    "eigen3",
+    "nlohmann-json",
+    "spdlog",
+    "gtest",
+    "fmt"
+  ]
+}

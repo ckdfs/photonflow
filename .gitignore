@@ -25,3 +25,30 @@ src-tauri/target/
 src-tauri/gen/
 src-tauri/binaries/
 **/*.log
+
+# C++ Backend
+photonflow-cpp/build/
+photonflow-cpp/out/
+photonflow-cpp/.vs/
+photonflow-cpp/vcpkg_installed/
+
+# Root build directory (CMake)
+build/
+
+# MSVC build artifacts
+*.obj
+*.lib
+*.pdb
+*.ilk
+*.exe
+*.tlog
+*.log
+*.idb
+*.ipch
+*.sln
+*.vcxproj
+*.vcxproj.filters
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+.vs/
