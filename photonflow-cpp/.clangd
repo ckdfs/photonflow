@@ -1,0 +1,11 @@
+CompileFlags:
+  Add:
+    - "-std=c++20"
+    - "-Iinclude"
+    - "-DNOMINMAX"
+    - "-D_USE_MATH_DEFINES"
+  CompilationDatabase: build
+
+Diagnostics:
+  ClangTidy:
+    Remove: [modernize-use-trailing-return-type]

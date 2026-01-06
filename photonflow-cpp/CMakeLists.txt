@@ -9,10 +9,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # MSVC 编译选项
 if(MSVC)
     add_compile_options(/W4 /utf-8)
-    add_compile_definitions(_USE_MATH_DEFINES)
+    add_compile_definitions(_USE_MATH_DEFINES NOMINMAX)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
+
+# 导出编译命令供 clangd 使用
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # 查找依赖包
 find_package(Eigen3 CONFIG REQUIRED)
@@ -26,11 +29,22 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # ============== 核心库 ==============
 add_library(photonflow_core STATIC
+    # Core
     src/core/signal.cpp
     src/core/sim_context.cpp
     src/core/graph.cpp
+    # Blocks infrastructure
     src/blocks/base_block.cpp
     src/blocks/block_registry.cpp
+    # Optical blocks
+    src/blocks/optical/laser.cpp
+    src/blocks/optical/mzm.cpp
+    src/blocks/optical/pm.cpp
+    # Electrical blocks
+    src/blocks/electrical/rf_source.cpp
+    src/blocks/electrical/dc_source.cpp
+    # Detectors
+    src/blocks/detectors/photodetector.cpp
 )
 
 target_link_libraries(photonflow_core
@@ -53,6 +67,7 @@ add_executable(photonflow_tests
     tests/test_signal.cpp
     tests/test_sim_context.cpp
     tests/test_graph.cpp
+    tests/test_blocks.cpp
 )
 
 target_link_libraries(photonflow_tests
