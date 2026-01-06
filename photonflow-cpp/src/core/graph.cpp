@@ -5,11 +5,9 @@
 
 #include "photonflow/core/graph.hpp"
 
-#include <algorithm>
 #include <queue>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
-
 
 namespace photonflow {
 
@@ -63,6 +61,17 @@ Graph Graph::from_json(const json &graph_json, const BlockRegistry &registry) {
   }
 
   return graph;
+}
+
+std::pair<std::string, std::string>
+Graph::resolve_source(const std::string &node_id,
+                      const std::string &port_name) const {
+  for (const auto &edge : edges_) {
+    if (edge.dst == node_id && edge.dst_port == port_name) {
+      return {edge.src, edge.src_port};
+    }
+  }
+  return {};
 }
 
 void Graph::compile() {

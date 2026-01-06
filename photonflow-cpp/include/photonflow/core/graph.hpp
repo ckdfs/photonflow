@@ -12,11 +12,10 @@
 #include "photonflow/core/signal.hpp"
 #include "photonflow/core/sim_context.hpp"
 
-
 #include <memory>
 #include <string>
-#include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace photonflow {
@@ -33,6 +32,7 @@ struct Edge {
 };
 
 /**
+ * @struct PairHash
  * @brief Hash function for (string, string) tuples used as map keys.
  */
 struct PairHash {
@@ -47,15 +47,9 @@ struct PairHash {
 using SignalMap =
     std::unordered_map<std::pair<std::string, std::string>, Signal, PairHash>;
 
-/**
- * @class Graph
- * @brief Executes a network of connected blocks.
- *
- * The Graph class manages a collection of blocks and their connections,
- * performs topological sorting for execution order, and runs the simulation.
- */
 class Graph {
 public:
+  // ... (constructors)
   /**
    * @brief Construct an empty graph.
    */
@@ -100,6 +94,17 @@ public:
    * Must be called before run().
    */
   void compile();
+
+  /**
+   * @brief Resolve the source of an input port.
+   * @param node_id Destination node ID
+   * @param port_name Destination port name
+   * @return Pair of {source_node_id, source_port_name}, or empty strings if not
+   * connected
+   */
+  std::pair<std::string, std::string>
+  resolve_source(const std::string &node_id,
+                 const std::string &port_name) const;
 
   /**
    * @brief Estimate the required sampling rate.

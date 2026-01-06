@@ -16,7 +16,7 @@ PhotonFlow is a composable optical/electrical modulation simulator with a web UI
 #### Backend (dev)
 ```bash
 cd backend
-PYTHONPATH=src uvicorn photonflow.server.app:app --host 0.0.0.0 --port 8000 --reload
+uvicorn photonflow.server.app:app --host 0.0.0.0 --port 8000 --reload --app-dir src
 ```
 
 #### Frontend (dev)

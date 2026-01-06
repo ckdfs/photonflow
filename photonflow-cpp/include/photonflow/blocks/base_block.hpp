@@ -10,12 +10,10 @@
 #include "photonflow/core/signal.hpp"
 #include "photonflow/core/sim_context.hpp"
 
-#include <memory>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
-
 
 namespace photonflow {
 
@@ -109,7 +107,21 @@ protected:
   template <typename T>
   T get_param(const std::string &key, const T &default_value) const {
     if (params_.contains(key)) {
-      return params_[key].get<T>();
+      const auto &val = params_[key];
+      if constexpr (std::is_arithmetic_v<T>) {
+        if (val.is_string()) {
+          try {
+            if constexpr (std::is_floating_point_v<T>) {
+              return static_cast<T>(std::stod(val.get<std::string>()));
+            } else {
+              return static_cast<T>(std::stoll(val.get<std::string>()));
+            }
+          } catch (...) {
+            // Fallthrough to normal get (will throw type_error)
+          }
+        }
+      }
+      return val.get<T>();
     }
     return default_value;
   }
@@ -124,7 +136,21 @@ protected:
   template <typename T>
   T get_nonideal(const std::string &key, const T &default_value) const {
     if (nonideal_.contains(key)) {
-      return nonideal_[key].get<T>();
+      const auto &val = nonideal_[key];
+      if constexpr (std::is_arithmetic_v<T>) {
+        if (val.is_string()) {
+          try {
+            if constexpr (std::is_floating_point_v<T>) {
+              return static_cast<T>(std::stod(val.get<std::string>()));
+            } else {
+              return static_cast<T>(std::stoll(val.get<std::string>()));
+            }
+          } catch (...) {
+            // Fallthrough
+          }
+        }
+      }
+      return val.get<T>();
     }
     return default_value;
   }

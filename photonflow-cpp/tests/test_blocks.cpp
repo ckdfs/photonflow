@@ -3,19 +3,22 @@
  * @brief Unit tests for Phase 2 blocks.
  */
 
+#include <cmath>
+#include <complex>
+
 #include "photonflow/blocks/block_registry.hpp"
 #include "photonflow/blocks/detectors/photodetector.hpp"
 #include "photonflow/blocks/electrical/dc_source.hpp"
 #include "photonflow/blocks/electrical/rf_source.hpp"
+#include "photonflow/blocks/optical/attenuator.hpp"
+#include "photonflow/blocks/optical/coupler.hpp"
+#include "photonflow/blocks/optical/fiber.hpp"
 #include "photonflow/blocks/optical/laser.hpp"
 #include "photonflow/blocks/optical/mzm.hpp"
 #include "photonflow/blocks/optical/pm.hpp"
 #include "photonflow/core/signal.hpp"
 #include "photonflow/core/sim_context.hpp"
 #include <gtest/gtest.h>
-
-
-#include <cmath>
 
 using namespace photonflow;
 
@@ -251,7 +254,220 @@ TEST_F(BlockTestFixture, PD_Responsivity) {
   EXPECT_NEAR(outputs.at("elec_out").data[0].real(), 0.8, 1e-10);
 }
 
+// ===================== Attenuator Tests =====================
+
+TEST_F(BlockTestFixture, Attenuator_LossApplied) {
+  Attenuator att("att1", {{"loss_db", 3.0}}, {});
+
+  // 1W input power
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in(optical_data, 100e9);
+  opt_in.center_freq = 193.1e12;
+
+  auto ctx = make_context(100);
+  auto outputs = att.process({{"opt_in", opt_in}}, ctx);
+
+  ASSERT_TRUE(outputs.contains("opt_out"));
+  const auto &sig = outputs.at("opt_out");
+
+  // 3 dB loss = power reduced by half, field by sqrt(2)
+  double expected_field = 1.0 / std::sqrt(2.0); // 10^(-3/20)
+  double actual_field = std::abs(sig.data[0]);
+  EXPECT_NEAR(actual_field, expected_field, 0.01);
+}
+
+TEST_F(BlockTestFixture, Attenuator_ZeroLoss) {
+  Attenuator att("att1", {{"loss_db", 0.0}}, {});
+
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in(optical_data, 100e9);
+
+  auto ctx = make_context(100);
+  auto outputs = att.process({{"opt_in", opt_in}}, ctx);
+
+  // No loss means signal unchanged
+  EXPECT_NEAR(std::abs(outputs.at("opt_out").data[0]), 1.0, 1e-10);
+}
+
+// ===================== Coupler Tests =====================
+
+TEST_F(BlockTestFixture, Coupler_3dBSplit) {
+  // Default 50:50 coupler
+  Coupler coupler("coupler1", {{"split_ratio", 0.5}}, {});
+
+  // Single input
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in1(optical_data, 100e9);
+  opt_in1.center_freq = 193.1e12;
+
+  auto ctx = make_context(100);
+  auto outputs = coupler.process({{"opt_in1", opt_in1}}, ctx);
+
+  ASSERT_TRUE(outputs.contains("opt_out1"));
+  ASSERT_TRUE(outputs.contains("opt_out2"));
+
+  // Power should be split 50:50
+  double power1 = std::norm(outputs.at("opt_out1").data[0]);
+  double power2 = std::norm(outputs.at("opt_out2").data[0]);
+  EXPECT_NEAR(power1, 0.5, 0.01);
+  EXPECT_NEAR(power2, 0.5, 0.01);
+}
+
+TEST_F(BlockTestFixture, Coupler_PowerConservation) {
+  Coupler coupler("coupler1", {{"split_ratio", 0.3}}, {});
+
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in1(optical_data, 100e9);
+
+  auto ctx = make_context(100);
+  auto outputs = coupler.process({{"opt_in1", opt_in1}}, ctx);
+
+  // Total power should be conserved
+  double input_power = 1.0;
+  double output_power = std::norm(outputs.at("opt_out1").data[0]) +
+                        std::norm(outputs.at("opt_out2").data[0]);
+  EXPECT_NEAR(output_power, input_power, 1e-10);
+}
+
+// ===================== OpticalFiber Tests =====================
+
+TEST_F(BlockTestFixture, OpticalFiber_Passthrough) {
+  // Zero length fiber should pass through unchanged
+  OpticalFiber fiber("fiber1", {{"length_m", 0.0}}, {});
+
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in(optical_data, 100e9);
+  opt_in.center_freq = 193.1e12;
+
+  auto ctx = make_context(100);
+  auto outputs = fiber.process({{"opt_in", opt_in}}, ctx);
+
+  ASSERT_TRUE(outputs.contains("opt_out"));
+  // Power should be unchanged
+  EXPECT_NEAR(std::norm(outputs.at("opt_out").data[0]), 1.0, 1e-10);
+}
+
+TEST_F(BlockTestFixture, OpticalFiber_Attenuation) {
+  // 0.2 dB/km over 10 km = 2 dB loss
+  OpticalFiber fiber("fiber1",
+                     {{"length_m", 10000.0}, {"alpha_db_per_km", 0.2}}, {});
+
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in(optical_data, 100e9);
+  opt_in.center_freq = 193.1e12;
+
+  auto ctx = make_context(100);
+  auto outputs = fiber.process({{"opt_in", opt_in}}, ctx);
+
+  // 2 dB power loss = 10^(-2/10) = 0.631
+  double expected_power = std::pow(10.0, -2.0 / 10.0);
+  double actual_power = std::norm(outputs.at("opt_out").data[0]);
+  EXPECT_NEAR(actual_power, expected_power, 0.01);
+}
+
+TEST_F(BlockTestFixture, OpticalFiber_DispersionPreservesPower) {
+  // Dispersion only - power should be preserved
+  OpticalFiber fiber("fiber1",
+                     {{"length_m", 1000.0}, {"beta2_s2_per_m", -21.7e-27}}, {});
+
+  Eigen::VectorXcd optical_data =
+      Eigen::VectorXcd::Constant(100, std::complex<double>(1.0, 0.0));
+  Signal opt_in(optical_data, 100e9);
+  opt_in.center_freq = 193.1e12;
+
+  auto ctx = make_context(100);
+  auto outputs = fiber.process({{"opt_in", opt_in}}, ctx);
+
+  // For CW input, power should be preserved under dispersion
+  double input_power = 1.0;
+  double output_power = std::norm(outputs.at("opt_out").data[0]);
+  EXPECT_NEAR(output_power, input_power, 1e-6);
+}
+
 // ===================== Block Registry Tests =====================
+
+TEST_F(BlockTestFixture, MeasurementProbes_Creation) {
+  SimContext ctx(make_context(100));
+  Signal sig_opt(Eigen::VectorXcd::Zero(100), 100e9, 0);
+  Signal sig_elec(Eigen::VectorXcd::Zero(100), 100e9, 0);
+
+  // OSAProbe
+  {
+    auto blk = BlockRegistry::instance().create("OSAProbe", "osa1", {}, {});
+    ASSERT_NE(blk, nullptr);
+    EXPECT_EQ(blk->block_type(), "OSAProbe");
+    // Should accept optical input and return empty output (passthrough/sink
+    // behavior)
+    auto outputs = blk->process({{"opt_in", sig_opt}}, ctx);
+    EXPECT_TRUE(outputs.empty());
+  }
+
+  // ESAProbe
+  {
+    auto blk = BlockRegistry::instance().create("ESAProbe", "esa1", {}, {});
+    ASSERT_NE(blk, nullptr);
+    EXPECT_EQ(blk->block_type(), "ESAProbe");
+    auto outputs = blk->process({{"elec_in", sig_elec}}, ctx);
+    EXPECT_TRUE(outputs.empty());
+  }
+
+  // ScopeProbe
+  {
+    auto blk = BlockRegistry::instance().create("ScopeProbe", "scope1", {}, {});
+    ASSERT_NE(blk, nullptr);
+    EXPECT_EQ(blk->block_type(), "ScopeProbe");
+    auto outputs = blk->process({{"elec_in", sig_elec}}, ctx);
+    EXPECT_TRUE(outputs.empty());
+  }
+}
+
+TEST_F(BlockTestFixture, MZMComposite_Basic) {
+  auto blk = BlockRegistry::instance().create(
+      "MZMComposite", "mzm_c", {{"Vpi", 5.0}, {"phi_bias", 0.0}}, {});
+  ASSERT_NE(blk, nullptr);
+
+  auto ctx = make_context(100);
+  int n = ctx.n_samples();
+
+  // Constant optical input
+  Signal opt_in(Eigen::VectorXcd::Constant(n, 1.0), ctx.fs(), ctx.t0());
+  // Zero electrical input
+  Signal elec_in(Eigen::VectorXcd::Zero(n), ctx.fs(), ctx.t0());
+
+  std::unordered_map<std::string, Signal> inputs = {{"opt_in", opt_in},
+                                                    {"elec_in", elec_in}};
+
+  auto outputs = blk->process(inputs, ctx);
+  ASSERT_TRUE(outputs.contains("opt_out"));
+
+  // With 0V input and 0 bias, phase = 0
+  // Transfer = cos(0) = 1.0
+  EXPECT_NEAR(std::abs(outputs.at("opt_out").data[0]), 1.0, 1e-5);
+}
+
+TEST_F(BlockTestFixture, DPMZMComposite_Creation) {
+  auto blk =
+      BlockRegistry::instance().create("DPMZMComposite", "dpmzm_c", {}, {});
+  ASSERT_NE(blk, nullptr);
+  EXPECT_EQ(blk->block_type(), "DPMZMComposite");
+
+  auto ctx = make_context(100);
+  int n = ctx.n_samples();
+  Signal opt_in(Eigen::VectorXcd::Constant(n, 1.0), ctx.fs(), ctx.t0());
+  Signal elec(Eigen::VectorXcd::Zero(n), ctx.fs(), ctx.t0());
+
+  std::unordered_map<std::string, Signal> inputs = {
+      {"opt_in", opt_in}, {"elec_i", elec}, {"elec_q", elec}};
+
+  auto outputs = blk->process(inputs, ctx);
+  ASSERT_TRUE(outputs.contains("opt_out"));
+}
 
 TEST_F(BlockTestFixture, Registry_BlocksRegistered) {
   auto &registry = BlockRegistry::instance();
@@ -262,6 +478,15 @@ TEST_F(BlockTestFixture, Registry_BlocksRegistered) {
   EXPECT_TRUE(registry.has_type("MZM"));
   EXPECT_TRUE(registry.has_type("PM"));
   EXPECT_TRUE(registry.has_type("PD"));
+  EXPECT_TRUE(registry.has_type("Attenuator"));
+  EXPECT_TRUE(registry.has_type("Coupler"));
+  EXPECT_TRUE(registry.has_type("OpticalFiber"));
+  // New blocks
+  EXPECT_TRUE(registry.has_type("OSAProbe"));
+  EXPECT_TRUE(registry.has_type("ESAProbe"));
+  EXPECT_TRUE(registry.has_type("ScopeProbe"));
+  EXPECT_TRUE(registry.has_type("MZMComposite"));
+  EXPECT_TRUE(registry.has_type("DPMZMComposite"));
 }
 
 TEST_F(BlockTestFixture, Registry_CreateBlock) {

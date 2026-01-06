@@ -7,6 +7,7 @@
     "nlohmann-json",
     "spdlog",
     "gtest",
-    "fmt"
+    "fmt",
+    "crow"
   ]
 }

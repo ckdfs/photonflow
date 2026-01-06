@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # MSVC 编译选项
 if(MSVC)
-    add_compile_options(/W4 /utf-8)
+    add_compile_options(/W4 /utf-8 /FS)
     add_compile_definitions(_USE_MATH_DEFINES NOMINMAX)
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
@@ -23,6 +23,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
+find_package(Crow CONFIG REQUIRED)
 
 # 包含目录
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -40,11 +41,24 @@ add_library(photonflow_core STATIC
     src/blocks/optical/laser.cpp
     src/blocks/optical/mzm.cpp
     src/blocks/optical/pm.cpp
+    src/blocks/optical/attenuator.cpp
+    src/blocks/optical/coupler.cpp
+    src/blocks/optical/fiber.cpp
     # Electrical blocks
     src/blocks/electrical/rf_source.cpp
     src/blocks/electrical/dc_source.cpp
     # Detectors
     src/blocks/detectors/photodetector.cpp
+    # Measurement probes
+    src/blocks/measurement/osa_probe.cpp
+    src/blocks/measurement/esa_probe.cpp
+    src/blocks/measurement/scope_probe.cpp
+    # Composite blocks
+    src/blocks/composite/mzm_composite.cpp
+    src/blocks/composite/dpmzm_composite.cpp
+    # Server
+    src/server/job_manager.cpp
+    src/server/server.cpp
 )
 
 target_link_libraries(photonflow_core
@@ -53,12 +67,27 @@ target_link_libraries(photonflow_core
         nlohmann_json::nlohmann_json
         spdlog::spdlog
         fmt::fmt
+        Crow::Crow
 )
 
 target_include_directories(photonflow_core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
+
+# ============== 服务器可执行文件 ==============
+add_executable(photonflow_server
+    src/main.cpp
+)
+
+target_link_libraries(photonflow_server
+    PRIVATE
+        photonflow_core
+)
+
+if(MSVC)
+    target_link_options(photonflow_server PRIVATE /WHOLEARCHIVE:photonflow_core)
+endif()
 
 # ============== 测试 ==============
 enable_testing()
@@ -68,6 +97,9 @@ add_executable(photonflow_tests
     tests/test_sim_context.cpp
     tests/test_graph.cpp
     tests/test_blocks.cpp
+    tests/test_probes.cpp
+    tests/test_server.cpp
+    tests/test_infrastructure.cpp
 )
 
 target_link_libraries(photonflow_tests
@@ -77,11 +109,15 @@ target_link_libraries(photonflow_tests
         GTest::gtest_main
 )
 
+if(MSVC)
+    target_link_options(photonflow_tests PRIVATE /WHOLEARCHIVE:photonflow_core)
+endif()
+
 include(GoogleTest)
 gtest_discover_tests(photonflow_tests)
 
 # ============== 安装配置 ==============
-install(TARGETS photonflow_core
+install(TARGETS photonflow_core photonflow_server
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
@@ -90,3 +126,4 @@ install(TARGETS photonflow_core
 install(DIRECTORY include/photonflow
     DESTINATION include
 )
+

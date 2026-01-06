@@ -28,6 +28,7 @@ src-tauri/binaries/
 
 # C++ Backend
 photonflow-cpp/build/
+photonflow-cpp/build-int/
 photonflow-cpp/out/
 photonflow-cpp/.vs/
 photonflow-cpp/vcpkg_installed/

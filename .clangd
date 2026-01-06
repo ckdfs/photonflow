@@ -1,0 +1,7 @@
+CompileFlags:
+  CompilationDatabase: photonflow-cpp/build-int
+  Add: 
+    - "-ID:/code/photonflow/photonflow-cpp/build-int/vcpkg_installed/x64-windows/include"
+    - "-ID:/code/photonflow/photonflow-cpp/build-int/vcpkg_installed/x64-windows/include/eigen3"
+    - "-ID:/code/photonflow/photonflow-cpp/include"
+    - "-std=c++20"
