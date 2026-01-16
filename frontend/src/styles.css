@@ -41,6 +41,46 @@ body {
   min-height: 0;
 }
 
+.canvas-topbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+.canvas-topbar button {
+  padding: 6px 10px;
+  border: 1px solid #c8bfae;
+  background: #fff7e8;
+  border-radius: 8px;
+}
+
+.layout-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #e3d6bf;
+  background: #fff7e8;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6b5a42;
+}
+
+.layout-slider input[type='range'] {
+  width: 140px;
+}
+
+.layout-slider-value {
+  min-width: 28px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .toolbar {
   position: absolute;
   bottom: 12px;
@@ -322,8 +362,18 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  top: 50%;
-  transform: translateY(-50%);
+  /* ReactFlow's Handle uses position classes + transform to sit on the edge.
+     Don't override transform here, otherwise handles drift into the node. */
+  z-index: 2;
+}
+
+/* Push handles to the node's outer edge (account for node padding). */
+.block-node .react-flow__handle-left.port {
+  left: -12px;
+}
+
+.block-node .react-flow__handle-right.port {
+  right: -12px;
 }
 
 .port-optical {

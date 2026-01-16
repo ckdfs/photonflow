@@ -10,6 +10,7 @@ import ReactFlow, {
   Node,
   ReactFlowProvider
 } from 'reactflow'
+import dagre from 'dagre'
 import { api } from './api'
 import BlockLibrary from './components/BlockLibrary'
 import Inspector from './components/Inspector'
@@ -40,11 +41,69 @@ const probeTypeMap: Record<string, { kind: 'osa' | 'esa' | 'time'; inputPort: st
   ScopeProbe: { kind: 'time', inputPort: 'elec_in', isOptical: false }
 }
 
+const isOutputPort = (name: string) => name.includes('out')
+
+type LayoutOpts = {
+  nodesep: number
+  ranksep: number
+}
+
+const estimateNodeSize = (node: Node) => {
+  const ports: Record<string, string> = node?.data?.ports || {}
+  const entries = Object.entries(ports)
+  const inputs = entries.filter(([name]) => !isOutputPort(name))
+  const outputs = entries.filter(([name]) => isOutputPort(name))
+  const rows = Math.max(inputs.length, outputs.length, 1)
+  const titleLen = String(node?.data?.label || '').length
+  const subtitleLen = String(node?.data?.subtitle || '').length
+  const longestPortLen = entries.reduce((m, [name]) => Math.max(m, name.length), 0)
+
+  const width = Math.max(180, 170 + Math.min(18, Math.max(titleLen, subtitleLen)) * 7, 150 + longestPortLen * 7)
+  const height = 54 + rows * 22
+  return { width, height }
+}
+
+const layoutWithDagre = (flowNodes: Node[], flowEdges: Edge[], opts: LayoutOpts) => {
+  if (!flowNodes.length) return flowNodes
+  if (!flowEdges.length) return flowNodes
+
+  const g = new dagre.graphlib.Graph()
+  g.setDefaultEdgeLabel(() => ({}))
+  g.setGraph({
+    rankdir: 'LR',
+    nodesep: opts.nodesep,
+    ranksep: opts.ranksep,
+    marginx: 40,
+    marginy: 40
+  })
+
+  flowNodes.forEach((n) => {
+    const { width, height } = estimateNodeSize(n)
+    g.setNode(n.id, { width, height })
+  })
+  flowEdges.forEach((e) => {
+    if (e.source && e.target) g.setEdge(e.source, e.target)
+  })
+
+  dagre.layout(g)
+
+  return flowNodes.map((n) => {
+    const p = g.node(n.id)
+    if (!p) return n
+    const { width, height } = p
+    return {
+      ...n,
+      position: { x: p.x - width / 2, y: p.y - height / 2 }
+    }
+  })
+}
+
 export default function App() {
   const [lang, setLang] = useState<Lang>('zh')
   const [specs, setSpecs] = useState<Record<string, any>>({})
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
+  const [layoutGap, setLayoutGap] = useState<number>(20)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [result, setResult] = useState<any>(null)
@@ -62,6 +121,11 @@ export default function App() {
     (en: string, zh: string) => (lang === 'zh' ? zh : en),
     [lang]
   )
+
+  const layoutOpts = useMemo<LayoutOpts>(() => ({
+    nodesep: layoutGap,
+    ranksep: layoutGap * 2
+  }), [layoutGap])
 
   const lastLaserCenterHz = useMemo(() => {
     for (let i = nodes.length - 1; i >= 0; i -= 1) {
@@ -209,8 +273,9 @@ export default function App() {
       sourceHandle: edge.src_port,
       targetHandle: edge.dst_port
     }))
-    return { flowNodes, flowEdges }
-  }, [labelForType, lang, specs])
+    const laidOut = layoutWithDagre(flowNodes, flowEdges, layoutOpts)
+    return { flowNodes: laidOut, flowEdges }
+  }, [labelForType, lang, layoutOpts, specs])
 
   const makeNode = useCallback((type: string, id: string, position: { x: number; y: number }, params?: Record<string, any>) => {
     const spec = specs[type]
@@ -290,14 +355,19 @@ export default function App() {
         { id: 'e5', source: 'pd1', target: 'esa1', sourceHandle: 'elec_out', targetHandle: 'elec_in' }
       )
     }
-    setNodes(baseNodes)
+    setNodes(layoutWithDagre(baseNodes, baseEdges, layoutOpts))
     setEdges(baseEdges)
     setSelectedId(null)
     setResult(null)
     setExpanded(null)
     setShowExpanded(false)
     setStatus(msg('Example loaded', '示例已加载'))
-  }, [makeNode, msg])
+  }, [layoutOpts, makeNode, msg])
+
+  const autoLayout = useCallback(() => {
+    setNodes((nds) => layoutWithDagre(nds, edges, layoutOpts))
+    setStatus(msg('Auto layout applied', '已自动排布'))
+  }, [edges, layoutOpts, msg])
 
   const isValidConnection = useCallback(
     (connection: Connection) => {
@@ -783,16 +853,36 @@ export default function App() {
           </ReactFlow>
         </ReactFlowProvider>
         <div className="toolbar">
-          <button onClick={runValidate}>{t('validate')}</button>
-          <button onClick={runExpand}>{t('expand')}</button>
-          <button onClick={runJob}>{t('run')}</button>
-          <button onClick={deleteSelected} disabled={showExpanded}>{t('delete')}</button>
-          <button onClick={clearGraph} disabled={showExpanded}>{t('clearGraph')}</button>
+          <button
+            onClick={autoLayout}
+            disabled={showExpanded || nodes.length === 0 || edges.length === 0}
+            title={msg('Layout based on topology', '按拓扑关系自动排布')}
+          >
+            {msg('Auto layout', '自动排布')}
+          </button>
+          <div className="layout-slider" title={msg('Adjust spacing (affects expanded view live)', '调整间距（展开视图会实时生效）')}>
+            <span>{msg('Spacing', '间距')}</span>
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={10}
+              value={layoutGap}
+              onChange={(e) => setLayoutGap(Number(e.target.value))}
+              disabled={nodes.length === 0 || edges.length === 0}
+            />
+            <span className="layout-slider-value">{layoutGap}</span>
+          </div>
           <ExpandToggle
             showExpanded={showExpanded}
             onToggle={toggleExpanded}
             labels={{ showExpanded: t('showExpanded'), collapse: t('collapse') }}
           />
+          <button onClick={runValidate}>{t('validate')}</button>
+          <button onClick={runExpand}>{t('expand')}</button>
+          <button onClick={runJob}>{t('run')}</button>
+          <button onClick={deleteSelected} disabled={showExpanded}>{t('delete')}</button>
+          <button onClick={clearGraph} disabled={showExpanded}>{t('clearGraph')}</button>
           <div className="graph-stats">
             {t('nodes')}: {nodes.length} · {t('edges')}: {edges.length}
           </div>

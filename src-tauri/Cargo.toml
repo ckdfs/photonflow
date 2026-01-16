@@ -8,6 +8,8 @@ edition = "2021"
 [package.metadata.tauri]
 product_name = "PhotonFlow"
 
+[package.metadata.tauri-winres]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
