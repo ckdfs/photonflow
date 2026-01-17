@@ -13,6 +13,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("ElecSplitter")
 class ElecSplitter(BaseBlock):
+    """Electrical power splitter. Divides an electrical signal into two outputs with configurable imbalance."""
+
     PORTS = {"elec_in": "electrical", "elec_out1": "electrical", "elec_out2": "electrical"}
     SPEC = {
         "params": {},

@@ -13,6 +13,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("ElecGain")
 class ElecGain(BaseBlock):
+    """Electrical amplifier/attenuator. Scales an electrical signal by a configurable gain factor with optional noise."""
+
     PORTS = {"elec_in": "electrical", "elec_out": "electrical"}
     SPEC = {
         "params": {"gain": {"type": "float", "default": 1.0, "unit": ""}},

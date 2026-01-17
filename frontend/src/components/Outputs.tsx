@@ -1,4 +1,5 @@
 import React from 'react'
+import { Paper, Typography, Box, Stack } from '@mui/material'
 import SpectrumPlot from './SpectrumPlot'
 import TimePlot from './TimePlot'
 
@@ -70,13 +71,13 @@ export default function Outputs({
   const hasProbes = probeOutputs.length > 0
 
   return (
-    <div className="panel">
-      <div className="panel-header">
-        <div className="panel-title">{labels.title}</div>
-      </div>
-      <div className="panel-body outputs">
+    <Paper variant="outlined" sx={{ p: 1.5 }}>
+      <Typography variant="h6" gutterBottom>{labels.title}</Typography>
+      <Stack spacing={2}>
         {!hasProbes ? (
-          <div className="hint">{labels.noProbes}</div>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 2 }}>
+            {labels.noProbes}
+          </Typography>
         ) : (
           probeOutputs.map((probe, index) => {
             const item = extra[index] || null
@@ -84,8 +85,8 @@ export default function Outputs({
               probe.kind === 'osa'
                 ? `${labels.osa} · ${probe.title}`
                 : probe.kind === 'esa'
-                ? `${labels.esa} · ${probe.title}`
-                : `${labels.time} · ${probe.title}`
+                  ? `${labels.esa} · ${probe.title}`
+                  : `${labels.time} · ${probe.title}`
             if (probe.kind === 'time') {
               return <TimePlot key={probe.id} title={title} data={item?.kind === 'time' ? item : null} />
             }
@@ -117,7 +118,9 @@ export default function Outputs({
                   frequencyHz: labels.frequencyHz,
                   saveImage: labels.saveImage,
                   saveCsv: labels.saveCsv,
-                  exportSettings: probe.kind === 'osa' ? labels.osaPlotSettings : labels.esaPlotSettings,
+                  exportSettings: probe.kind === 'osa' ? labels.exportSettings : labels.exportSettings,
+                  osaPlotSettings: labels.osaPlotSettings,
+                  esaPlotSettings: labels.esaPlotSettings,
                   exportScale: labels.exportScale,
                   exportFormat: labels.exportFormat,
                   exportBackground: labels.exportBackground,
@@ -137,28 +140,41 @@ export default function Outputs({
             )
           })
         )}
-        <div>
-          <div className="section-title">{labels.meta}</div>
+
+        <Box>
+          <Typography variant="subtitle2" color="primary" gutterBottom>{labels.meta}</Typography>
           {meta ? (
-            <div className="meta-grid">
-              <div>fs: {meta.fs}</div>
-              <div>duration: {meta.duration_s}</div>
-              <div>samples: {meta.n_samples ?? '-'}</div>
-              <div>device: {meta.device}</div>
-            </div>
+            <Paper variant="outlined" sx={{ p: 1, bgcolor: 'action.hover' }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, fontSize: '0.875rem' }}>
+                <div>fs: {meta.fs}</div>
+                <div>duration: {meta.duration_s}</div>
+                <div>samples: {meta.n_samples ?? '-'}</div>
+                <div>device: {meta.device}</div>
+              </Box>
+            </Paper>
           ) : (
-            <div className="hint">{labels.noResult}</div>
+            <Typography variant="body2" color="text.secondary">{labels.noResult}</Typography>
           )}
-        </div>
-        <div>
-          <div className="section-title">{labels.jobResult}</div>
-          <pre>{result ? JSON.stringify(result, null, 2) : labels.noResult}</pre>
-        </div>
-        <div>
-          <div className="section-title">{labels.expandedGraph}</div>
-          <pre>{expanded ? JSON.stringify(expanded, null, 2) : labels.notExpanded}</pre>
-        </div>
-      </div>
-    </div>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle2" color="primary" gutterBottom>{labels.jobResult}</Typography>
+          <Paper variant="outlined" sx={{ p: 1, bgcolor: 'action.hover', overflow: 'auto', maxHeight: 200 }}>
+            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'monospace' }}>
+              {result ? JSON.stringify(result, null, 2) : labels.noResult}
+            </pre>
+          </Paper>
+        </Box>
+
+        <Box>
+          <Typography variant="subtitle2" color="primary" gutterBottom>{labels.expandedGraph}</Typography>
+          <Paper variant="outlined" sx={{ p: 1, bgcolor: 'action.hover', overflow: 'auto', maxHeight: 200 }}>
+            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'monospace' }}>
+              {expanded ? JSON.stringify(expanded, null, 2) : labels.notExpanded}
+            </pre>
+          </Paper>
+        </Box>
+      </Stack>
+    </Paper>
   )
 }

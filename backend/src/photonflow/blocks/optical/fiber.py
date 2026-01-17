@@ -14,6 +14,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("OpticalFiber")
 class OpticalFiber(BaseBlock):
+    """Optical fiber propagation model. Simulates chromatic dispersion (GVD), attenuation, PMD, and Kerr nonlinearity using split-step Fourier method."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {

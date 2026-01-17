@@ -1,14 +1,19 @@
 {
   "name": "photonflow-ui",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "cd .. && frontend\\node_modules\\.bin\\tauri dev"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
     "@tauri-apps/api": "^2.0.0",
     "axios": "^1.7.2",
     "dagre": "^0.8.5",

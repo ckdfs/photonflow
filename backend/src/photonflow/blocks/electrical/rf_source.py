@@ -14,6 +14,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("RFSource")
 class RFSource(BaseBlock):
+    """Radio-frequency (RF) sinusoidal signal generator. Outputs a sine wave with configurable frequency, amplitude, phase, and DC offset."""
+
     PORTS = {"elec_out": "electrical"}
     SPEC = {
         "params": {

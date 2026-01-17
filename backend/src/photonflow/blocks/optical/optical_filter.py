@@ -40,6 +40,8 @@ def _phase_from_magnitude(magnitude: torch.Tensor, eps: float = 1e-12) -> torch.
 
 @register_block("OpticalFilter")
 class OpticalFilter(BaseBlock):
+    """Optical frequency-domain filter. Supports lowpass, highpass, bandpass, and bandstop configurations with various filter shapes (Gaussian, Butterworth)."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {

@@ -3,7 +3,7 @@
 ## Project Overview
 - **Project**: PhotonFlow
 - **Focus**: Composable optical/electrical modulation simulator with Web UI and Desktop App
-- **Version**: 0.1.0
+- **Version**: 0.2.0
 - **License**: See LICENSE file
 
 ## Technology Stack

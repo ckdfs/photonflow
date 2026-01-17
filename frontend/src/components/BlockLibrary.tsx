@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { Paper, Typography, TextField, Button, Stack, Box, Tooltip } from '@mui/material'
 
 interface BlockLibraryProps {
   types: string[]
@@ -9,6 +10,7 @@ interface BlockLibraryProps {
   typeStyles?: Record<string, string>
   searchPlaceholder: string
   noMatchText: string
+  getDescription?: (type: string) => string
 }
 
 export default function BlockLibrary({
@@ -19,7 +21,8 @@ export default function BlockLibrary({
   groups,
   typeStyles,
   searchPlaceholder,
-  noMatchText
+  noMatchText,
+  getDescription
 }: BlockLibraryProps) {
   const [query, setQuery] = useState('')
   const filtered = useMemo(() => {
@@ -41,41 +44,83 @@ export default function BlockLibrary({
       .filter((group) => group.types.length > 0)
   }, [filteredSet, groups])
 
+  const renderButton = (type: string) => {
+    const label = labelForType(type)
+    const description = getDescription ? getDescription(type) : ''
+    // Use whitespace-pre-wrap to handle newlines if user wants full name + description in separate lines?
+    // User asked for "Full Name" and "Description". labelForType is likely the full name (or close to it).
+    // Let's assume label is the name.
+
+    return (
+      <Tooltip
+        key={type}
+        title={
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>{label}</Typography>
+            {description && <Typography variant="body2">{description}</Typography>}
+          </Box>
+        }
+        arrow
+        placement="right"
+      >
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => onAdd(type)}
+          sx={{
+            justifyContent: 'flex-start',
+            textTransform: 'none',
+            textAlign: 'left',
+            height: 'auto',
+            py: 0.5,
+            px: 1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: 'block'
+          }}
+          color={typeStyles?.[type]?.includes('measure') ? 'secondary' : 'primary'}
+        >
+          {label}
+        </Button>
+      </Tooltip>
+    )
+  }
+
   return (
-    <div className="panel">
-      <div className="panel-title">{title}</div>
-      <div className="panel-body">
-        <input
-          className="field-input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={searchPlaceholder}
-        />
+    <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Typography variant="h6">{title}</Typography>
+      <TextField
+        size="small"
+        fullWidth
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={searchPlaceholder}
+      />
+      <Box sx={{ pr: 0.5 }}>
         {filtered.length === 0 ? (
-          <div className="hint">{noMatchText}</div>
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 2 }}>
+            {noMatchText}
+          </Typography>
         ) : grouped ? (
-          grouped.map((group) => (
-            <div key={group.id} className="block-group">
-              <div className="block-group-title">{group.title}</div>
-              {group.types.map((type) => (
-                <button
-                  key={type}
-                  className={`block-button ${typeStyles?.[type] ?? ''}`.trim()}
-                  onClick={() => onAdd(type)}
-                >
-                  {labelForType(type)}
-                </button>
-              ))}
-            </div>
-          ))
+          <Stack spacing={2}>
+            {grouped.map((group) => (
+              <Box key={group.id}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  {group.title}
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
+                  {group.types.map((type) => renderButton(type))}
+                </Box>
+              </Box>
+            ))}
+          </Stack>
         ) : (
-          filtered.map((type) => (
-            <button key={type} className={`block-button ${typeStyles?.[type] ?? ''}`.trim()} onClick={() => onAdd(type)}>
-              {labelForType(type)}
-            </button>
-          ))
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
+            {filtered.map((type) => renderButton(type))}
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   )
 }

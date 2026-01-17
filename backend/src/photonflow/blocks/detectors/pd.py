@@ -15,6 +15,8 @@ from photonflow.core.filters import apply_lowpass
 
 @register_block("PD")
 class PD(BaseBlock):
+    """Photodiode (PD) detector. Converts optical power to electrical current. Supports responsivity, bandwidth limiting, shot noise, and thermal noise modeling."""
+
     PORTS = {"opt_in": "optical", "elec_out": "electrical"}
     SPEC = {
         "params": {

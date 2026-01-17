@@ -86,7 +86,10 @@ class BaseBlock:
 
     @classmethod
     def describe(cls) -> Dict[str, object]:
-        return {"ports": dict(cls.PORTS), "spec": _normalize_spec(cls.spec())}
+        doc = cls.__doc__ or ""
+        # Clean up docstring: strip leading/trailing whitespace
+        doc = doc.strip()
+        return {"ports": dict(cls.PORTS), "spec": _normalize_spec(cls.spec()), "doc": doc}
 
     def apply_defaults(self) -> None:
         for key, spec in self.SPEC.get("params", {}).items():

@@ -63,10 +63,12 @@ fn main() {
       // The _internal directory must be in the same folder as the exe
       let backend_dir = if cfg!(debug_assertions) {
           // Dev mode: use local binaries directory
-          std::env::current_dir()
-              .unwrap()
-              .join("src-tauri")
-              .join("binaries")
+          let cwd = std::env::current_dir().unwrap();
+          if cwd.ends_with("src-tauri") {
+            cwd.join("binaries")
+          } else {
+            cwd.join("src-tauri").join("binaries")
+          }
       } else {
           // Production: use resource directory
           app.path().resource_dir()

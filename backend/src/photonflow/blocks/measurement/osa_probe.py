@@ -11,6 +11,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("OSAProbe")
 class OSAProbe(BaseBlock):
+    """Optical Spectrum Analyzer (OSA) probe. Measures the optical power spectrum of a signal, displaying power vs. wavelength/frequency."""
+
     PORTS = {"opt_in": "optical"}
     SPEC = {
         "params": {

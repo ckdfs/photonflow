@@ -68,6 +68,8 @@ def _ou_sequence(
 
 @register_block("PolarizationRotator")
 class PolarizationRotator(BaseBlock):
+    """Polarization rotator. Rotates the polarization state by a specified angle."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {"angle_rad": {"type": "float", "default": 0.0, "unit": "rad"}},
@@ -143,6 +145,8 @@ class PolarizationRotator(BaseBlock):
 
 @register_block("PolarizationPDL")
 class PolarizationPDL(BaseBlock):
+    """Polarization-dependent loss (PDL) element. Applies different attenuation to orthogonal polarization states."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {
@@ -257,6 +261,8 @@ class PolarizationPDL(BaseBlock):
 
 @register_block("PolarizationWaveplate")
 class PolarizationWaveplate(BaseBlock):
+    """General waveplate. Introduces a phase delay (retardance) between polarization components. Use for quarter-wave (λ/4) or half-wave (λ/2) plates."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {
@@ -336,6 +342,8 @@ class PolarizationWaveplate(BaseBlock):
 
 @register_block("PolarizationController")
 class PolarizationController(BaseBlock):
+    """Polarization controller. Cascaded waveplate configuration for arbitrary polarization state transformation. Supports presets like QHQ (quarter-half-quarter)."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {

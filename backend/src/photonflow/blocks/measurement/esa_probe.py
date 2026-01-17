@@ -11,6 +11,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("ESAProbe")
 class ESAProbe(BaseBlock):
+    """Electrical Spectrum Analyzer (ESA) probe. Measures the power spectrum of an electrical signal, displaying power vs. frequency."""
+
     PORTS = {"elec_in": "electrical"}
     SPEC = {
         "params": {

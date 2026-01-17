@@ -1,25 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import dagre from 'dagre'
+import { Box, Stack, Paper, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Button, Slider, IconButton } from '@mui/material'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import OpenInFullIcon from '@mui/icons-material/OpenInFull'
+import DeleteIcon from '@mui/icons-material/Delete'
+import ClearAllIcon from '@mui/icons-material/ClearAll'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ReactFlow, {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-  Background,
   Connection,
-  Controls,
   Edge,
   Node,
-  ReactFlowProvider
+  ReactFlowProvider,
+  Background,
+  Controls
 } from 'reactflow'
-import dagre from 'dagre'
 import { api } from './api'
-import BlockLibrary from './components/BlockLibrary'
-import Inspector from './components/Inspector'
-import Outputs from './components/Outputs'
-import BlockNode from './components/BlockNode'
-import ExpandToggle from './components/ExpandToggle'
 import { blockLabel, buildLabels, Lang } from './i18n'
+import NavRail, { PageId } from './components/NavRail'
+import HomePage from './pages/HomePage'
+import EditorPage from './pages/EditorPage'
+import ResultsPage from './pages/ResultsPage'
+import SettingsPage from './pages/SettingsPage'
 
-const nodeTypes = { block: BlockNode }
+
 
 const defaultSim = {
   backend: 'torch',
@@ -114,7 +121,7 @@ export default function App() {
   const [fsMode, setFsMode] = useState<'auto' | 'custom'>('auto')
   const [fsCustom, setFsCustom] = useState<number>(1e10)
   const [nSamples, setNSamples] = useState<string>('')
-  const [showAdvancedSim, setShowAdvancedSim] = useState(false)
+
 
   const { t } = useMemo(() => buildLabels(lang), [lang])
   const msg = useCallback(
@@ -212,48 +219,14 @@ export default function App() {
       })
   }, [labelForType, nodes])
 
-  const typeStyles = useMemo(() => ({
-    OSAProbe: 'block-button--measure',
-    ESAProbe: 'block-button--measure',
-    ScopeProbe: 'block-button--measure'
-  }), [])
 
-  const blockGroups = useMemo(() => {
-    const allTypes = Object.keys(specs)
-    const typeSet = new Set(allTypes)
-    const pick = (list: string[]) => list.filter((type) => typeSet.has(type))
-    const groups = [
-      { id: 'measurement', title: t('blocksMeasurement'), types: pick(['OSAProbe', 'ESAProbe', 'ScopeProbe']) },
-      { id: 'optical', title: t('blocksOptical'), types: pick([
-        'Laser',
-        'Coupler',
-        'PhaseShifter',
-        'Attenuator',
-        'OpticalFiber',
-        'OpticalFilter',
-        'PolarizationRotator',
-        'PolarizationPDL',
-        'PolarizationWaveplate',
-        'PolarizationController'
-      ]) },
-      { id: 'eo', title: t('blocksEO'), types: pick(['PM', 'MZMComposite', 'DPMZMComposite']) },
-      { id: 'oe', title: t('blocksOE'), types: pick(['PD']) },
-      { id: 'electrical', title: t('blocksElectrical'), types: pick(['RFSource', 'DCSource', 'ElecSplitter', 'ElecGain']) }
-    ]
-    const used = new Set(groups.flatMap((group) => group.types))
-    const other = allTypes.filter((type) => !used.has(type))
-    if (other.length) {
-      groups.push({ id: 'other', title: t('blocksOther'), types: other })
-    }
-    return groups.filter((group) => group.types.length > 0)
-  }, [specs, t])
 
   const toFlowGraph = useCallback((graph: any) => {
     const flowNodes: Node[] = (graph.nodes || []).map((node: any, index: number) => {
       const spec = specs[node.type] || {}
       const parent = node.meta?.composite_parent
       return {
-        id: node.id,
+        id: String(node.id),
         type: 'block',
         position: { x: 60 + (index % 6) * 180, y: 60 + Math.floor(index / 6) * 120 },
         data: {
@@ -268,8 +241,8 @@ export default function App() {
     })
     const flowEdges: Edge[] = (graph.edges || []).map((edge: any, index: number) => ({
       id: `${edge.src}-${edge.src_port}-${edge.dst}-${edge.dst_port}-${index}`,
-      source: edge.src,
-      target: edge.dst,
+      source: String(edge.src),
+      target: String(edge.dst),
       sourceHandle: edge.src_port,
       targetHandle: edge.dst_port
     }))
@@ -414,26 +387,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [deleteSelected, showExpanded])
 
-  const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedId) || null, [nodes, selectedId])
 
-  const updateNodeParam = (section: string, key: string, value: any) => {
-    if (!selectedNode) return
-    setNodes((nds) =>
-      nds.map((n) => {
-        if (n.id !== selectedNode.id) return n
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            [section]: {
-              ...n.data[section],
-              [key]: value
-            }
-          }
-        }
-      })
-    )
-  }
 
   const buildGraph = () => {
     const graphNodes = nodes.map((node) => ({
@@ -538,6 +492,11 @@ export default function App() {
   }
 
   const runExpand = async () => {
+    if (expanded) {
+      setShowExpanded((v) => !v)
+      return
+    }
+
     const { graph, useProbes, probeIssues } = buildGraph()
     if (!useProbes) {
       setStatus(msg('Add probe nodes (OSA/ESA/Scope) before expanding.', '请先添加观测仪器节点（光谱仪/电谱仪/示波器）。'))
@@ -605,6 +564,27 @@ export default function App() {
   }
 
   const view = showExpanded && expanded ? toFlowGraph(expanded) : { flowNodes: nodes, flowEdges: edges }
+
+  const selectedNode = useMemo(() => view.flowNodes.find((n) => n.id === selectedId) || null, [view.flowNodes, selectedId])
+
+  const updateNodeParam = (section: string, key: string, value: any) => {
+    if (!selectedNode || showExpanded) return
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== selectedNode.id) return n
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            [section]: {
+              ...n.data[section],
+              [key]: value
+            }
+          }
+        }
+      })
+    )
+  }
   const toggleExpanded = () => {
     if (!expanded) {
       setStatus(msg('No expanded graph. Click Expand first.', '没有展开图，请先点击展开。'))
@@ -633,332 +613,117 @@ export default function App() {
     )
   }, [labelForType])
 
-  return (
-    <div className="layout">
-      <div className="sidebar">
-        <div className="panel">
-          <div className="panel-title">{t('settings')}</div>
-          <div className="panel-body">
-            <label className="field">
-              <span>{t('language')}</span>
-              <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-                <option value="zh">{lang === 'zh' ? '中文' : 'Chinese'}</option>
-                <option value="en">{lang === 'zh' ? '英文' : 'English'}</option>
-              </select>
-            </label>
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-title">{t('simSettings')}</div>
-          <div className="panel-body">
-            <label className="field">
-              <span>{t('backend')}</span>
-              <select
-                value={simConfig.backend}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, backend: e.target.value }))}
-              >
-                <option value="torch">torch</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>{t('device')}</span>
-              <select
-                value={simConfig.device}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, device: e.target.value }))}
-              >
-                <option value="cpu">cpu</option>
-                <option value="cuda">cuda</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>{t('fsMode')}</span>
-              <select
-                value={fsMode}
-                onChange={(e) => setFsMode(e.target.value as 'auto' | 'custom')}
-              >
-                <option value="auto">{t('fsAuto')}</option>
-                <option value="custom">{t('fsCustom')}</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>{t('fsValue')}</span>
-              <input
-                type="number"
-                value={fsCustom}
-                disabled={fsMode === 'auto'}
-                onChange={(e) => setFsCustom(Number(e.target.value))}
-              />
-            </label>
-            <label className="field">
-              <span>{t('oversample')}</span>
-              <input
-                type="number"
-                value={simConfig.oversample}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, oversample: Number(e.target.value) }))}
-              />
-            </label>
-            <label className="field">
-              <span>{t('window')}</span>
-              <select
-                value={simConfig.window}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, window: e.target.value }))}
-              >
-                <option value="hann">hann</option>
-                <option value="hamming">hamming</option>
-                <option value="blackman">blackman</option>
-                <option value="rect">rect</option>
-                <option value="kaiser">kaiser</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>{t('duration')}</span>
-              <input
-                type="number"
-                value={simConfig.duration_s}
-                onChange={(e) => setSimConfig((cfg) => ({ ...cfg, duration_s: Number(e.target.value) }))}
-              />
-            </label>
-            <label className="field">
-              <span>{t('nSamples')}</span>
-              <input
-                type="number"
-                value={nSamples}
-                onChange={(e) => setNSamples(e.target.value)}
-              />
-            </label>
-            <button
-              className="link-button"
-              onClick={() => setShowAdvancedSim((v) => !v)}
-              type="button"
-            >
-              {showAdvancedSim ? t('hideAdvanced') : t('showAdvanced')}
-            </button>
-            {showAdvancedSim && (
-              <div className="advanced-group">
-                <div className="section-title">{t('advancedSettings')}</div>
-                <label className="field">
-                  <span>{t('seed')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.seed}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, seed: Number(e.target.value) }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>{t('fsMin')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.fs_min}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, fs_min: Number(e.target.value) }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>{t('fsMax')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.fs_max}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, fs_max: Number(e.target.value) }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>{t('chunk')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.chunk}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, chunk: Number(e.target.value) }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>{t('minSamples')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.min_samples}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, min_samples: Number(e.target.value) }))}
-                  />
-                </label>
-                <label className="field">
-                  <span>{t('maxSamples')}</span>
-                  <input
-                    type="number"
-                    value={simConfig.max_samples}
-                    onChange={(e) => setSimConfig((cfg) => ({ ...cfg, max_samples: Number(e.target.value) }))}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="panel">
-          <div className="panel-title">{t('examples')}</div>
-          <div className="panel-body">
-            <button className="block-button" onClick={() => loadExample('pm')}>
-              {t('examplePm')}
-            </button>
-            <button className="block-button" onClick={() => loadExample('mzm')}>
-              {t('exampleMzm')}
-            </button>
-            <button className="block-button" onClick={() => loadExample('dpmzm')}>
-              {t('exampleDpmzm')}
-            </button>
-          </div>
-        </div>
-        <BlockLibrary
-          types={Object.keys(specs)}
-          onAdd={addNode}
-          title={t('blocks')}
-          labelForType={labelForType}
-          groups={blockGroups}
-          typeStyles={typeStyles}
-          searchPlaceholder={t('searchBlocks')}
-          noMatchText={t('noMatch')}
-        />
-      </div>
-      <div className="canvas">
-        <ReactFlowProvider>
-          <ReactFlow
-            nodes={view.flowNodes}
-            edges={view.flowEdges}
-            nodeTypes={nodeTypes}
+
+  const [activePage, setActivePage] = useState<PageId>('editor')
+
+  const renderPage = () => {
+    switch (activePage) {
+      case 'home':
+        return <HomePage onNavigate={setActivePage} />
+      case 'editor':
+        return (
+          <EditorPage
+            nodes={nodes}
+            edges={edges}
+            setNodes={setNodes}
+            setEdges={setEdges}
+            selectedId={selectedId}
+            setSelectedId={setSelectedId}
+            selectedEdgeId={selectedEdgeId}
+            setSelectedEdgeId={setSelectedEdgeId}
+            expanded={expanded}
+            showExpanded={showExpanded}
+            view={view}
             onNodesChange={(changes) => {
               if (!showExpanded) setNodes((nds) => applyNodeChanges(changes, nds))
             }}
             onEdgesChange={(changes) => {
               if (!showExpanded) setEdges((eds) => applyEdgeChanges(changes, eds))
             }}
-            onConnect={(connection) => {
-              if (!showExpanded) onConnect(connection)
-            }}
+            onConnect={onConnect}
             isValidConnection={isValidConnection}
-            onNodeClick={(_, node) => {
-              if (!showExpanded) setSelectedId(node.id)
-              if (!showExpanded) setSelectedEdgeId(null)
+            addNode={addNode}
+            deleteSelected={deleteSelected}
+            clearGraph={clearGraph}
+            autoLayout={autoLayout}
+            runValidate={runValidate}
+            runExpand={runExpand}
+            runJob={runJob}
+            loadExample={loadExample}
+            layoutGap={layoutGap}
+            setLayoutGap={setLayoutGap}
+            specs={specs}
+            selectedNode={selectedNode}
+            updateNodeParam={updateNodeParam}
+            t={t}
+            msg={msg}
+            status={status}
+            labelForType={labelForType}
+            labels={{
+              inspector: t('inspector'),
+              selectNode: t('selectNode'),
+              title: t('inspector'),
+              params: t('params'),
+              nonideal: t('nonideal')
             }}
-            onEdgeClick={(_, edge) => {
-              if (!showExpanded) setSelectedEdgeId(edge.id)
-              if (!showExpanded) setSelectedId(null)
-            }}
-            onPaneClick={() => {
-              if (!showExpanded) {
-                setSelectedId(null)
-                setSelectedEdgeId(null)
-              }
-            }}
-            nodesDraggable={!showExpanded}
-            nodesConnectable={!showExpanded}
-            elementsSelectable={!showExpanded}
-            fitView
-          >
-            <Controls />
-            <Background />
-          </ReactFlow>
-        </ReactFlowProvider>
-        <div className="toolbar">
-          <button
-            onClick={autoLayout}
-            disabled={showExpanded || nodes.length === 0 || edges.length === 0}
-            title={msg('Layout based on topology', '按拓扑关系自动排布')}
-          >
-            {msg('Auto layout', '自动排布')}
-          </button>
-          <div className="layout-slider" title={msg('Adjust spacing (affects expanded view live)', '调整间距（展开视图会实时生效）')}>
-            <span>{msg('Spacing', '间距')}</span>
-            <input
-              type="range"
-              min={0}
-              max={200}
-              step={10}
-              value={layoutGap}
-              onChange={(e) => setLayoutGap(Number(e.target.value))}
-              disabled={nodes.length === 0 || edges.length === 0}
-            />
-            <span className="layout-slider-value">{layoutGap}</span>
-          </div>
-          <ExpandToggle
-            showExpanded={showExpanded}
-            onToggle={toggleExpanded}
-            labels={{ showExpanded: t('showExpanded'), collapse: t('collapse') }}
           />
-          <button onClick={runValidate}>{t('validate')}</button>
-          <button onClick={runExpand}>{t('expand')}</button>
-          <button onClick={runJob}>{t('run')}</button>
-          <button onClick={deleteSelected} disabled={showExpanded}>{t('delete')}</button>
-          <button onClick={clearGraph} disabled={showExpanded}>{t('clearGraph')}</button>
-          <div className="graph-stats">
-            {t('nodes')}: {nodes.length} · {t('edges')}: {edges.length}
-          </div>
-          <div className="status-line" title={status || '-'}>
-            {t('status')}: {status || '-'}
-          </div>
-        </div>
-      </div>
-      <div className="sidebar">
-        <Inspector
-          node={selectedNode}
-          spec={selectedNode ? specs[selectedNode.data.type]?.spec : null}
-          onChange={updateNodeParam}
-          labels={{
-            title: t('inspector'),
-            selectNode: t('selectNode'),
-            params: t('params'),
-            nonideal: t('nonideal')
-          }}
-        />
-          <Outputs
+        )
+      case 'results':
+        return (
+          <ResultsPage
             result={result}
-            expanded={expanded}
-            carrierAutoHz={lastLaserCenterHz ?? undefined}
             probeOutputs={probeOutputs}
             labels={{
-              title: t('outputs'),
-              jobResult: t('jobResult'),
-              expandedGraph: t('expandedGraph'),
-              noResult: t('noResult'),
-              notExpanded: t('notExpanded'),
-              noProbes: t('noProbes'),
-              osa: t('osa'),
-              esa: t('esa'),
-              time: t('time'),
-              meta: t('meta'),
-            range: t('range'),
-            peak: t('peak'),
-            markers: t('markers'),
-            markerInput: t('markerInput'),
-            addMarker: t('addMarker'),
-            clearMarkers: t('clearMarkers'),
-            removeMarker: t('removeMarker'),
-            unit: t('unit'),
-            unitHz: t('unitHz'),
-            unitNm: t('unitNm'),
-            unitOffset: t('unitOffset'),
-            offset: t('offset'),
-            carrierCenter: t('carrierCenter'),
-            carrierAuto: t('carrierAuto'),
-            carrierManual: t('carrierManual'),
-            carrierValue: t('carrierValue'),
-            wavelengthNm: t('wavelengthNm'),
-            frequencyHz: t('frequencyHz'),
-            saveImage: t('saveImage'),
-            saveCsv: t('saveCsv'),
-            exportSettings: t('exportSettings'),
-            exportScale: t('exportScale'),
-            exportFormat: t('exportFormat'),
-            exportBackground: t('exportBackground'),
-            exportPng: t('exportPng'),
-            exportSvg: t('exportSvg'),
-            exportBgSolid: t('exportBgSolid'),
-            exportBgTransparent: t('exportBgTransparent'),
-            osaPlotSettings: t('osaPlotSettings'),
-            esaPlotSettings: t('esaPlotSettings'),
-            showPeak: t('showPeak'),
-            showMinMax: t('showMinMax'),
-            viewRange: t('viewRange'),
-            rangeAuto: t('rangeAuto'),
-            rangeCustom: t('rangeCustom'),
-            rangeMin: t('rangeMin'),
-            rangeMax: t('rangeMax')
+              osaPlotSettings: t('osaPlotSettings'),
+              esaPlotSettings: t('esaPlotSettings'),
+              showPeak: t('showPeak'),
+              showMinMax: t('showMinMax'),
+              viewRange: t('viewRange'),
+              rangeAuto: t('rangeAuto'),
+              rangeCustom: t('rangeCustom'),
+              rangeMin: t('rangeMin'),
+              rangeMax: t('rangeMax'),
+              saveCsv: t('saveCsv'),
+              exportSettings: t('exportSettings'),
+              exportScale: t('exportScale'),
+              exportFormat: t('exportFormat'),
+              exportBackground: t('exportBackground'),
+              exportPng: t('exportPng'),
+              exportSvg: t('exportSvg'),
+              exportBgSolid: t('exportBgSolid'),
+              exportBgTransparent: t('exportBgTransparent'),
+              noResults: msg('No results available. Run a simulation first.', '暂无结果，请先运行仿真。')
             }}
           />
-      </div>
-    </div>
+        )
+      case 'settings':
+        return (
+          <SettingsPage
+            lang={lang}
+            setLang={setLang}
+            simConfig={simConfig}
+            setSimConfig={setSimConfig}
+            fsMode={fsMode}
+            setFsMode={setFsMode}
+            fsCustom={fsCustom}
+            setFsCustom={setFsCustom}
+            nSamples={nSamples}
+            setNSamples={setNSamples}
+            t={t}
+          />
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
+      <NavRail activePage={activePage} onNavigate={setActivePage} />
+      <Box sx={{ flex: 1, overflow: 'hidden', height: '100%' }}>
+        {renderPage()}
+      </Box>
+    </Box>
   )
 }
+

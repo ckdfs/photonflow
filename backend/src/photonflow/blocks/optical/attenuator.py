@@ -11,6 +11,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("Attenuator")
 class Attenuator(BaseBlock):
+    """Optical attenuator. Reduces optical power by a configurable loss in dB."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {"loss_db": {"type": "float", "default": 0.0, "unit": "dB"}},

@@ -45,19 +45,22 @@ try:
         multiprocessing.freeze_support()
         
         # Debug: Log Parent PID periodically to see if we can use it for watchdog
+
+
+        # Watchdog: Exit if stdin is closed (parent process dies)
         import threading
-        import time
-        def log_ppid():
-            while True:
-                try:
-                    ppid = os.getppid()
-                    logging.info(f"Current PPID: {ppid}")
-                except Exception as e:
-                    logging.error(f"Failed to get PPID: {e}")
-                time.sleep(5)
-        
-        debug_thread = threading.Thread(target=log_ppid, daemon=True)
-        debug_thread.start()
+        def stdin_watchdog():
+            try:
+                # Read until EOF
+                for _ in sys.stdin:
+                    pass
+            except Exception:
+                pass
+            logging.info("Parent process closed stdin. Exiting...")
+            os._exit(0) # Force exit
+
+        watchdog_thread = threading.Thread(target=stdin_watchdog, daemon=True)
+        watchdog_thread.start()
 
         port = 8000
         if len(sys.argv) > 1:
@@ -77,11 +80,20 @@ try:
         handler.setFormatter(formatter)
         root_logger.addHandler(handler)
 
-        # Add startup event to emit ready signal
-        @app.on_event("startup")
-        async def on_startup():
+        # Define lifespan context manager for startup/shutdown events
+        from contextlib import asynccontextmanager
+        
+        @asynccontextmanager
+        async def lifespan(application):
+            # Startup
             emit_stage("ready")
             logging.info("Server is ready")
+            yield
+            # Shutdown (if needed)
+            logging.info("Server shutting down")
+
+        # Assign the lifespan to the app
+        app.router.lifespan_context = lifespan
 
         # Use log_config=None to prevent uvicorn from overwriting our logging config
         try:

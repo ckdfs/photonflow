@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { Paper, Typography, Box } from '@mui/material'
 
 interface TimePlotProps {
   title: string
@@ -32,17 +33,21 @@ export default function TimePlot({ title, data }: TimePlotProps) {
   }, [data])
 
   return (
-    <div className="plot-card">
-      <div className="plot-title">{title}</div>
+    <Paper variant="outlined" sx={{ p: 1.5, minWidth: 280 }}>
+      <Typography variant="subtitle2" gutterBottom align="center">{title}</Typography>
       {data && data.t.length ? (
-        <svg viewBox={`0 0 ${width} ${height}`} className="plot-svg">
-          <rect x="0" y="0" width={width} height={height} fill="#fdf8ef" rx="10" />
-          <polyline points={lineReal} fill="none" stroke="#2c6fb8" strokeWidth="1.4" />
-          {lineImag ? <polyline points={lineImag} fill="none" stroke="#b4512a" strokeWidth="1.1" strokeDasharray="4 3" /> : null}
-        </svg>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{ overflow: 'visible' }}>
+            <rect x="0" y="0" width={width} height={height} fill="none" stroke="#e0e0e0" rx="4" />
+            <polyline points={lineReal} fill="none" stroke="#2c6fb8" strokeWidth="1.4" />
+            {lineImag ? <polyline points={lineImag} fill="none" stroke="#b4512a" strokeWidth="1.1" strokeDasharray="4 3" /> : null}
+          </svg>
+        </Box>
       ) : (
-        <div className="plot-empty">No data</div>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+          No data
+        </Typography>
       )}
-    </div>
+    </Paper>
   )
 }

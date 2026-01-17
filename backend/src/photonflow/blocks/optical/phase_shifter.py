@@ -13,6 +13,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("PhaseShifter")
 class PhaseShifter(BaseBlock):
+    """Fixed optical phase shifter. Applies a constant phase offset to the optical signal."""
+
     PORTS = {"opt_in": "optical", "opt_out": "optical"}
     SPEC = {
         "params": {"phi": {"type": "float", "default": 0.0, "unit": "rad"}},

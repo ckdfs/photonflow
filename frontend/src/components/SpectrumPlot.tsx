@@ -1,4 +1,29 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react'
+import {
+  Paper,
+  Typography,
+  Box,
+  Stack,
+  IconButton,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  Popover,
+  Tooltip,
+  Divider,
+  FormControl,
+  InputLabel,
+  InputAdornment
+} from '@mui/material'
+import SaveAltIcon from '@mui/icons-material/SaveAlt'
+import SettingsIcon from '@mui/icons-material/Settings'
+import DownloadIcon from '@mui/icons-material/Download'
+import AddIcon from '@mui/icons-material/Add'
+import ClearAllIcon from '@mui/icons-material/ClearAll'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 interface SpectrumPlotProps {
   title: string
@@ -34,6 +59,8 @@ interface SpectrumPlotProps {
     exportSvg: string
     exportBgSolid: string
     exportBgTransparent: string
+    osaPlotSettings: string
+    esaPlotSettings: string
     showPeak: string
     showMinMax: string
     viewRange: string
@@ -56,7 +83,8 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
   const [exportScale, setExportScale] = useState<number>(4)
   const [exportFormat, setExportFormat] = useState<'png' | 'svg'>('png')
   const [exportBackground, setExportBackground] = useState<'solid' | 'transparent'>('solid')
-  const [showExportSettings, setShowExportSettings] = useState(false)
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null)
+
   const [showPeak, setShowPeak] = useState(false)
   const [showMinMax, setShowMinMax] = useState(false)
   const [rangeMode, setRangeMode] = useState<'auto' | 'custom'>('auto')
@@ -68,7 +96,6 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
   const [manualCarrierInput, setManualCarrierInput] = useState('')
   const [manualCarrierHz, setManualCarrierHz] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
-  const plotActionsRef = useRef<HTMLDivElement | null>(null)
 
   const peakCarrierHz = useMemo(() => {
     if (!data || data.freq.length === 0) return 0
@@ -128,11 +155,11 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
         peakY: 0,
         peakVal: 0,
         peakFreq: 0,
+        peakDisplayX: 0,
         dataMinX: 0,
         dataMaxX: 0,
         displayMinX: 0,
-        displayMaxX: 0,
-        carrierFreq: 0
+        displayMaxX: 0
       }
     }
     let sourceFreq = data.freq
@@ -327,18 +354,6 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
       return resolved ?? marker
     }))
   }, [data, dataMinX, dataMaxX])
-
-  useEffect(() => {
-    if (!showExportSettings) return
-    const handleClick = (event: MouseEvent) => {
-      if (!plotActionsRef.current) return
-      if (!plotActionsRef.current.contains(event.target as Node)) {
-        setShowExportSettings(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [showExportSettings])
 
   const formatOffsetValue = (value: number) => {
     const scaled = value / offsetScale.scale
@@ -674,270 +689,232 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
     img.src = url
   }
 
+  const openSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setSettingsAnchorEl(event.currentTarget)
+  }
+
+  const closeSettings = () => {
+    setSettingsAnchorEl(null)
+  }
+
+  const open = Boolean(settingsAnchorEl)
+
   return (
-    <div className="plot-card">
-      <div className="plot-header">
-        <div className="plot-title">{title}</div>
-        <div className="plot-actions" ref={plotActionsRef}>
-          <button
-            className="plot-icon-button"
-            type="button"
-            onClick={handleSaveImage}
-            title={labels?.saveImage ?? 'Save Image'}
-          >
-            ⭳
-          </button>
-          <button
-            className="plot-icon-button"
-            type="button"
-            onClick={handleSaveCsv}
-            title={labels?.saveCsv ?? 'Save CSV'}
-          >
-            ⓒ
-          </button>
-          <button
-            className="plot-icon-button"
-            type="button"
-            onClick={() => setShowExportSettings((v) => !v)}
-            title={labels?.exportSettings ?? 'Export Settings'}
-          >
-            ⚙
-          </button>
-          {showExportSettings && (
-            <div className="plot-options">
-              {isOptical && (
-                <>
-                  <div className="plot-options-row">
-                    <span>{labels?.carrierCenter ?? 'Carrier'}</span>
-                    <select
-                      value={carrierMode}
-                      onChange={(e) => handleCarrierModeChange(e.target.value as 'auto' | 'manual')}
-                    >
-                      <option value="auto">{labels?.carrierAuto ?? 'Auto'}</option>
-                      <option value="manual">{labels?.carrierManual ?? 'Manual'}</option>
-                    </select>
-                  </div>
-                  {carrierMode === 'manual' && (
-                    <div className="plot-options-row">
-                      <span>{labels?.carrierValue ?? 'Carrier'} ({carrierUnitLabel})</span>
-                      <input
-                        type="number"
-                        step="any"
-                        value={manualCarrierInput}
-                        onChange={(e) => handleCarrierInputChange(e.target.value)}
-                        onBlur={(e) => handleCarrierInputChange(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleCarrierInputChange((e.target as HTMLInputElement).value)
-                        }}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="plot-options-row">
-                <span>{labels?.viewRange ?? 'View Range'}</span>
-                <select
-                  value={rangeMode}
-                  onChange={(e) => setRangeMode(e.target.value as 'auto' | 'custom')}
-                >
-                  <option value="auto">{labels?.rangeAuto ?? 'Auto'}</option>
-                  <option value="custom">{labels?.rangeCustom ?? 'Custom'}</option>
-                </select>
-              </div>
-              {rangeMode === 'custom' && (
-                <>
-                  <div className="plot-options-row">
-                    <span>{labels?.rangeMin ?? 'Min'} ({rangeUnitLabel})</span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={rangeMinInput}
-                      onChange={(e) => handleRangeMinChange(e.target.value)}
-                      onBlur={(e) => handleRangeMinChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleRangeMinChange((e.target as HTMLInputElement).value)
-                      }}
-                    />
-                  </div>
-                  <div className="plot-options-row">
-                    <span>{labels?.rangeMax ?? 'Max'} ({rangeUnitLabel})</span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={rangeMaxInput}
-                      onChange={(e) => handleRangeMaxChange(e.target.value)}
-                      onBlur={(e) => handleRangeMaxChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleRangeMaxChange((e.target as HTMLInputElement).value)
-                      }}
-                    />
-                  </div>
-                </>
-              )}
-              <div className="plot-options-toggle">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={showPeak}
-                    onChange={(e) => setShowPeak(e.target.checked)}
+    <Paper variant="outlined" sx={{ p: 1.5, minWidth: 280 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Typography variant="subtitle2" noWrap sx={{ maxWidth: '70%' }}>{title}</Typography>
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title={labels?.saveImage ?? 'Save Image'}>
+            <IconButton size="small" onClick={handleSaveImage}>
+              <SaveAltIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={labels?.saveCsv ?? 'Save CSV'}>
+            <IconButton size="small" onClick={handleSaveCsv}>
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={labels?.exportSettings ?? 'Settings'}>
+            <IconButton size="small" onClick={openSettings}>
+              <SettingsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      </Box>
+
+      <Popover
+        open={open}
+        anchorEl={settingsAnchorEl}
+        onClose={closeSettings}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Paper sx={{ p: 2, maxWidth: 320 }}>
+          <Stack spacing={2}>
+            {isOptical && (
+              <>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{labels?.carrierCenter ?? 'Carrier'}</InputLabel>
+                  <Select value={carrierMode} label={labels?.carrierCenter ?? 'Carrier'} onChange={(e) => handleCarrierModeChange(e.target.value as 'auto' | 'manual')}>
+                    <MenuItem value="auto">{labels?.carrierAuto ?? 'Auto'}</MenuItem>
+                    <MenuItem value="manual">{labels?.carrierManual ?? 'Manual'}</MenuItem>
+                  </Select>
+                </FormControl>
+                {carrierMode === 'manual' && (
+                  <TextField
+                    size="small"
+                    label={`${labels?.carrierValue ?? 'Carrier'} (${carrierUnitLabel})`}
+                    type="number"
+                    value={manualCarrierInput}
+                    onChange={(e) => handleCarrierInputChange(e.target.value)}
+                    fullWidth
                   />
-                  <span>{labels?.showPeak ?? 'Show Peak'}</span>
-                </label>
-              </div>
-              <div className="plot-options-toggle">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={showMinMax}
-                    onChange={(e) => setShowMinMax(e.target.checked)}
-                  />
-                  <span>{labels?.showMinMax ?? 'Show Min/Max'}</span>
-                </label>
-              </div>
-              <div className="plot-options-divider" />
-              <div className="plot-options-row">
-                <span>{labels?.exportScale ?? 'Scale'}</span>
-                <input
+                )}
+              </>
+            )}
+
+            <FormControl size="small" fullWidth>
+              <InputLabel>{labels?.viewRange ?? 'View Range'}</InputLabel>
+              <Select value={rangeMode} label={labels?.viewRange ?? 'View Range'} onChange={(e) => setRangeMode(e.target.value as 'auto' | 'custom')}>
+                <MenuItem value="auto">{labels?.rangeAuto ?? 'Auto'}</MenuItem>
+                <MenuItem value="custom">{labels?.rangeCustom ?? 'Custom'}</MenuItem>
+              </Select>
+            </FormControl>
+
+            {rangeMode === 'custom' && (
+              <Stack direction="row" spacing={1}>
+                <TextField
+                  size="small"
+                  label={`${labels?.rangeMin ?? 'Min'} (${rangeUnitLabel})`}
                   type="number"
-                  min={1}
-                  step={1}
-                  value={exportScale}
-                  onChange={(e) => setExportScale(Number(e.target.value))}
+                  value={rangeMinInput}
+                  onChange={(e) => handleRangeMinChange(e.target.value)}
                 />
-              </div>
-              <div className="plot-options-row">
-                <span>{labels?.exportFormat ?? 'Format'}</span>
-                <select
-                  value={exportFormat}
-                  onChange={(e) => setExportFormat(e.target.value as 'png' | 'svg')}
-                >
-                  <option value="png">{labels?.exportPng ?? 'PNG'}</option>
-                  <option value="svg">{labels?.exportSvg ?? 'SVG'}</option>
-                </select>
-              </div>
-              <div className="plot-options-row">
-                <span>{labels?.exportBackground ?? 'Background'}</span>
-                <select
-                  value={exportBackground}
-                  onChange={(e) => setExportBackground(e.target.value as 'solid' | 'transparent')}
-                >
-                  <option value="solid">{labels?.exportBgSolid ?? 'Solid'}</option>
-                  <option value="transparent">{labels?.exportBgTransparent ?? 'Transparent'}</option>
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+                <TextField
+                  size="small"
+                  label={`${labels?.rangeMax ?? 'Max'} (${rangeUnitLabel})`}
+                  type="number"
+                  value={rangeMaxInput}
+                  onChange={(e) => handleRangeMaxChange(e.target.value)}
+                />
+              </Stack>
+            )}
+
+            <Stack direction="row" spacing={1}>
+              <FormControlLabel control={<Checkbox checked={showPeak} onChange={(e) => setShowPeak(e.target.checked)} size="small" />} label={labels?.showPeak ?? 'Show Peak'} />
+              <FormControlLabel control={<Checkbox checked={showMinMax} onChange={(e) => setShowMinMax(e.target.checked)} size="small" />} label={labels?.showMinMax ?? 'Show Min/Max'} />
+            </Stack>
+
+            <Divider />
+
+            <TextField
+              size="small"
+              label={labels?.exportScale ?? 'Scale'}
+              type="number"
+              value={exportScale}
+              onChange={(e) => setExportScale(Number(e.target.value))}
+              InputProps={{ inputProps: { min: 1, step: 1 } }}
+            />
+
+            <Stack direction="row" spacing={1}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{labels?.exportFormat ?? 'Format'}</InputLabel>
+                <Select value={exportFormat} label={labels?.exportFormat ?? 'Format'} onChange={(e) => setExportFormat(e.target.value as 'png' | 'svg')}>
+                  <MenuItem value="png">{labels?.exportPng ?? 'PNG'}</MenuItem>
+                  <MenuItem value="svg">{labels?.exportSvg ?? 'SVG'}</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" fullWidth>
+                <InputLabel>{labels?.exportBackground ?? 'Background'}</InputLabel>
+                <Select value={exportBackground} label={labels?.exportBackground ?? 'Background'} onChange={(e) => setExportBackground(e.target.value as 'solid' | 'transparent')}>
+                  <MenuItem value="solid">{labels?.exportBgSolid ?? 'Solid'}</MenuItem>
+                  <MenuItem value="transparent">{labels?.exportBgTransparent ?? 'Transparent'}</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
+          </Stack>
+        </Paper>
+      </Popover>
+
       {data && data.freq.length ? (
         <>
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${width} ${height}`}
-            className="plot-svg plot-clickable"
-            onClick={handleClick}
-          >
-            <rect x="0" y="0" width={width} height={height} fill="#fdf8ef" rx="10" />
-            <polyline points={points} fill="none" stroke="#b4512a" strokeWidth="1.4" />
-            {showPeak && <circle cx={peakX} cy={peakY} r="2.6" fill="#6f2c14" />}
-            {markers.map((marker, idx) => {
-              if (marker.freq < minX || marker.freq > maxX) return null
-              const rangeX = displayMaxX - displayMinX || 1
-              const displayValue = unitMode === 'offset' ? marker.freq - carrierRefHz : marker.freq
-              const x = padding + ((displayValue - displayMinX) / rangeX) * (width - padding * 2)
-              return (
-                <g key={`${marker.freq}-${idx}`} onDoubleClick={() => startEdit(idx)}>
-                  <line
-                    x1={x}
-                    y1={padding}
-                    x2={x}
-                    y2={height - padding}
-                    stroke="#2c6fb8"
-                    strokeWidth="1"
-                    strokeDasharray="4 3"
-                  />
-                </g>
-              )
-            })}
-            {showMinMax && (
-              <text x={padding} y={padding - 8} className="plot-axis">
-                {maxY.toFixed(1)} dB
-              </text>
-            )}
-            {showMinMax && (
-              <text x={padding} y={height - 6} className="plot-axis">
-                {minY.toFixed(1)} dB
-              </text>
-            )}
-          </svg>
-          <div className="plot-legend">
-            <span>{labels?.range ?? 'Range'}: {rangeText()}</span>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1, overflow: 'hidden' }}>
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 ${width} ${height}`}
+              width={width}
+              height={height}
+              style={{ overflow: 'visible', cursor: 'crosshair' }}
+              onClick={handleClick}
+            >
+              <rect x="0" y="0" width={width} height={height} fill="#fdf8ef" rx="4" stroke="#e0e0e0" />
+              <polyline points={points} fill="none" stroke="#b4512a" strokeWidth="1.4" />
+              {showPeak && <circle cx={peakX} cy={peakY} r="2.6" fill="#6f2c14" />}
+              {markers.map((marker, idx) => {
+                if (marker.freq < minX || marker.freq > maxX) return null
+                const rangeX = displayMaxX - displayMinX || 1
+                const displayValue = unitMode === 'offset' ? marker.freq - carrierRefHz : marker.freq
+                const x = padding + ((displayValue - displayMinX) / rangeX) * (width - padding * 2)
+                return (
+                  <g key={`${marker.freq}-${idx}`} onDoubleClick={() => startEdit(idx)} style={{ cursor: 'pointer' }}>
+                    <line
+                      x1={x}
+                      y1={padding}
+                      x2={x}
+                      y2={height - padding}
+                      stroke="#2c6fb8"
+                      strokeWidth="1"
+                      strokeDasharray="4 3"
+                    />
+                  </g>
+                )
+              })}
+              {showMinMax && (
+                <text x={padding} y={padding - 8} fontSize="10" fill="#666">
+                  {maxY.toFixed(1)} dB
+                </text>
+              )}
+              {showMinMax && (
+                <text x={padding} y={height - 6} fontSize="10" fill="#666">
+                  {minY.toFixed(1)} dB
+                </text>
+              )}
+            </svg>
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              {labels?.range ?? 'Range'}: {rangeText()}
+            </Typography>
             {showPeak && (
-              <span>
-                {labels?.peak ?? 'Peak'}:{' '}
-                {unitMode === 'offset' ? formatOffsetValue(peakDisplayX) : formatX(peakFreq)} @{' '}
-                {peakVal.toFixed(1)} dB
-              </span>
+              <Typography variant="caption" color="text.primary" fontWeight="bold">
+                {labels?.peak ?? 'Peak'}: {unitMode === 'offset' ? formatOffsetValue(peakDisplayX) : formatX(peakFreq)} @ {peakVal.toFixed(1)} dB
+              </Typography>
             )}
-            {isOptical && (
-              <label className="plot-unit">
-                <span>{labels?.unit ?? 'Unit'}</span>
-                <select
-                  value={unitMode}
-                  onChange={(e) => setUnitMode(e.target.value as 'freq' | 'wavelength' | 'offset')}
-                >
-                  <option value="wavelength">{labels?.unitNm ?? 'nm'}</option>
-                  <option value="freq">{labels?.unitHz ?? 'Hz'}</option>
-                  <option value="offset">{labels?.unitOffset ?? 'Offset'}</option>
-                </select>
-              </label>
-            )}
-          </div>
-          <div className="plot-markers">
-            <div className="plot-markers-title">{labels?.markers ?? 'Markers'}</div>
-            <div className="plot-marker-controls">
-              <input
-                type="number"
-                className="plot-marker-input"
-                placeholder={
-                  unitMode === 'wavelength'
-                    ? labels?.wavelengthNm ?? 'Wavelength (nm)'
-                    : unitMode === 'offset'
-                    ? `${labels?.offset ?? 'Offset'} (${rangeUnitLabel})`
-                    : labels?.frequencyHz ?? 'Frequency (Hz)'
-                }
+          </Box>
+
+          {isOptical && (
+            <FormControl size="small" fullWidth sx={{ mb: 2 }}>
+              <InputLabel>{labels?.unit ?? 'Unit'}</InputLabel>
+              <Select value={unitMode} label={labels?.unit ?? 'Unit'} onChange={(e) => setUnitMode(e.target.value as 'freq' | 'wavelength' | 'offset')}>
+                <MenuItem value="wavelength">{labels?.unitNm ?? 'nm'}</MenuItem>
+                <MenuItem value="freq">{labels?.unitHz ?? 'Hz'}</MenuItem>
+                <MenuItem value="offset">{labels?.unitOffset ?? 'Offset'}</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+
+          <Divider sx={{ mb: 1.5 }} />
+
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>{labels?.markers ?? 'Markers'}</Typography>
+            <Stack direction="row" spacing={1} mb={1}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder={unitMode === 'wavelength' ? (labels?.wavelengthNm ?? 'nm') : unitMode === 'offset' ? (labels?.offset ?? 'Offset') : (labels?.frequencyHz ?? 'Hz')}
                 value={markerInput}
                 onChange={(e) => setMarkerInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleManualAdd()
-                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualAdd()}
               />
-              <button className="plot-marker-button" type="button" onClick={handleManualAdd}>
-                {labels?.addMarker ?? 'Add'}
-              </button>
-              <button
-                className="plot-marker-button ghost"
-                type="button"
-                onClick={() => setMarkers([])}
-                disabled={markers.length === 0}
-              >
-                {labels?.clearMarkers ?? 'Clear'}
-              </button>
-            </div>
+              <Button variant="contained" size="small" onClick={handleManualAdd} sx={{ minWidth: 'auto' }}>
+                <AddIcon />
+              </Button>
+              <Button variant="outlined" size="small" onClick={() => setMarkers([])} disabled={markers.length === 0} sx={{ minWidth: 'auto' }}>
+                <ClearAllIcon />
+              </Button>
+            </Stack>
+
             {markers.length === 0 ? (
-              <div className="plot-marker-empty">-</div>
+              <Typography variant="caption" color="text.secondary" align="center" display="block">-</Typography>
             ) : (
-              <div className="plot-marker-list">
+              <Stack spacing={0.5}>
                 {markers.map((marker, idx) => (
-                  <div
-                    key={`${marker.freq}-${idx}`}
-                    className="plot-marker-row"
-                    onDoubleClick={() => startEdit(idx)}
-                  >
+                  <Box key={`${marker.freq}-${idx}`} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 0.5, bgcolor: 'action.hover', borderRadius: 1 }} onDoubleClick={() => startEdit(idx)}>
                     {editingIndex === idx ? (
-                      <input
-                        className="plot-marker-edit"
-                        type="number"
+                      <TextField
+                        size="small"
+                        variant="standard"
                         value={editingValue}
                         onChange={(e) => setEditingValue(e.target.value)}
                         onBlur={commitEdit}
@@ -946,29 +923,27 @@ export default function SpectrumPlot({ title, data, labels, isOptical = false, c
                           if (e.key === 'Escape') cancelEdit()
                         }}
                         autoFocus
+                        fullWidth
                       />
                     ) : (
-                      <span>
-                        {unitMode === 'offset' ? formatOffsetValue(markerOffsetValue(marker)) : formatX(marker.freq)} ·{' '}
-                        {formatDb(marker.value)}
-                      </span>
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                        {unitMode === 'offset' ? formatOffsetValue(markerOffsetValue(marker)) : formatX(marker.freq)} · {formatDb(marker.value)}
+                      </Typography>
                     )}
-                    <button
-                      className="plot-marker-button ghost"
-                      type="button"
-                      onClick={() => setMarkers((prev) => prev.filter((_, i) => i !== idx))}
-                    >
-                      {labels?.removeMarker ?? 'Remove'}
-                    </button>
-                  </div>
+                    <IconButton size="small" onClick={() => setMarkers((prev) => prev.filter((_, i) => i !== idx))}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
                 ))}
-              </div>
+              </Stack>
             )}
-          </div>
+          </Box>
         </>
       ) : (
-        <div className="plot-empty">No data</div>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+          No data
+        </Typography>
       )}
-    </div>
+    </Paper>
   )
 }

@@ -15,6 +15,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("PM")
 class PM(BaseBlock):
+    """Electro-optic phase modulator. Applies phase modulation to an optical signal based on an electrical drive voltage. Key parameter: Vπ (half-wave voltage)."""
+
     PORTS = {"opt_in": "optical", "elec_in": "electrical", "opt_out": "optical"}
     SPEC = {
         "params": {

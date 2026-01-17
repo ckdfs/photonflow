@@ -14,6 +14,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("Laser")
 class Laser(BaseBlock):
+    """Continuous-wave (CW) laser source. Generates an optical carrier signal with configurable power, frequency, and phase. Supports linewidth, RIN, and other non-ideal effects."""
+
     PORTS = {"opt_out": "optical"}
     SPEC = {
         "params": {

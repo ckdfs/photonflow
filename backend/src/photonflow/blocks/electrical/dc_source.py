@@ -13,6 +13,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("DCSource")
 class DCSource(BaseBlock):
+    """DC voltage source. Outputs a constant voltage level with optional noise and offset error modeling."""
+
     PORTS = {"elec_out": "electrical"}
     SPEC = {
         "params": {"voltage": {"type": "float", "default": 0.0, "unit": "V"}},

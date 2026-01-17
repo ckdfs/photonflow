@@ -14,6 +14,8 @@ from photonflow.core.sim import SimContext
 
 @register_block("Coupler")
 class Coupler(BaseBlock):
+    """2×2 optical coupler/splitter. Combines or splits optical signals with configurable coupling ratio and phase."""
+
     PORTS = {
         "opt_in1": "optical",
         "opt_in2": "optical",
